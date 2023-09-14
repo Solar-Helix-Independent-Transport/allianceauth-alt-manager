@@ -75,9 +75,11 @@ def get_stats_for_corp(request, corp_id: int):
         known_ids = list(_knowns)
 
         out = list(set(data) - set(known_ids))
-        new_names = providers.esi.client.Universe.post_universe_names(
-            ids=out
-        ).result()
+        new_names = []
+        if len(out):
+            new_names = providers.esi.client.Universe.post_universe_names(
+                ids=out
+            ).result()
         return 200, {"corporation": char.corporation_name,
                      # "character":{character_char,
                      "data": new_names,
