@@ -16,7 +16,7 @@ export const ReportMenu = ({ reportData }) => {
               <CorpSelect />
             </div>
           </li>
-          <NavItem href="/reports/add_corp_token">
+          <NavItem href="/alts/add_corp_token">
             <i class="fas fa-plus fa-fw"></i>
           </NavItem>
         </Nav>

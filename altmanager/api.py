@@ -84,6 +84,7 @@ def get_stats_for_corp(request, corp_id: int):
                      "unknowns": member_count-len(known_ids),
                      "knowns": len(known_ids)}
     except Exception as e:
+        logger.exception(e)
         return 500, "Error from ESI {e}"
 
 
