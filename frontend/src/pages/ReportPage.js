@@ -1,15 +1,14 @@
 import { loadReport } from "../apis/Dashboard";
 import { ReportHeader } from "../components/ReportHeader";
 import { ReportMenu } from "../components/ReportMenu";
+import { UnknownTable } from "../components/UnknownTable";
 import { ErrorLoader, PanelLoader } from "@pvyparts/allianceauth-components";
 import React, { useEffect, useState } from "react";
 import { useQuery } from "react-query";
 import { useParams } from "react-router-dom";
-import { UnknownTable } from "../components/UnknownTable";
 
 export const ReportPage = () => {
   let { corporationID } = useParams();
-
 
   const { isLoading, error, data, isFetching } = useQuery(
     ["dashboard", corporationID],

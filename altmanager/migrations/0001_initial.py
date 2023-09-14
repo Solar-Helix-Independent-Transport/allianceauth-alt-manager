@@ -15,8 +15,10 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='AltManagerConfiguration',
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('restricted_corps', models.ManyToManyField(to='eveonline.evecorporationinfo')),
+                ('id', models.AutoField(auto_created=True,
+                 primary_key=True, serialize=False, verbose_name='ID')),
+                ('restricted_corps', models.ManyToManyField(
+                    to='eveonline.evecorporationinfo')),
             ],
             options={
                 'verbose_name': 'Auth Reports Configuration',

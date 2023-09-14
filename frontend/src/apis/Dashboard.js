@@ -17,4 +17,3 @@ export async function loadCorps() {
   console.log(`get corps from api`);
   return api.data;
 }
-

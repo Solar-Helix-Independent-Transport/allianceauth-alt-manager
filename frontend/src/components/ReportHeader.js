@@ -42,16 +42,16 @@ export const ReportHeader = ({ reportData, isLoading = false }) => {
               justifyContent: "center",
             }}
           >
-                {reportData?.knowns > 0 && (
-                  <Label bsStyle={"success"} style={{ margin: "5px" }}>
-                    Known Characters: {reportData?.knowns}
-                  </Label>
-                )}
-                {reportData?.unknowns > 0 && (
-                  <Label bsStyle={"danger"} style={{ margin: "5px" }}>
-                    Unknown Characters: {reportData?.unknowns}
-                  </Label>
-                )}
+            {reportData?.knowns > 0 && (
+              <Label bsStyle={"success"} style={{ margin: "5px" }}>
+                Known Characters: {reportData?.knowns}
+              </Label>
+            )}
+            {reportData?.unknowns > 0 && (
+              <Label bsStyle={"danger"} style={{ margin: "5px" }}>
+                Unknown Characters: {reportData?.unknowns}
+              </Label>
+            )}
           </div>
         </div>
       </div>

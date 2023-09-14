@@ -1,6 +1,7 @@
 from django.apps import AppConfig
 
-from . import __version__, __branch__
+from . import __branch__, __version__
+
 
 class AltManagerConfig(AppConfig):
     name = 'altmanager'

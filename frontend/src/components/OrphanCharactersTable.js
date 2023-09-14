@@ -6,7 +6,6 @@ import { Panel } from "react-bootstrap";
 import { useQuery } from "react-query";
 
 export const OrphanCharacterTable = ({ data }) => {
-
   const columns = React.useMemo(() => {
     let cols = [
       {

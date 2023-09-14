@@ -34,5 +34,3 @@ class AltManagerConfiguration(SingletonModel):
         )
 
         default_permissions = []
-
-

@@ -11,10 +11,7 @@ export const UnknownTable = ({ reportData }) => {
         accessorKey: "name",
       },
       {
-        header: (row) => (
-        <div className="text-right">
-          Links
-        </div>),
+        header: (row) => <div className="text-right">Links</div>,
         accessorKey: "id",
         enableColumnFilter: false,
         enableSorting: false,
@@ -30,7 +27,7 @@ export const UnknownTable = ({ reportData }) => {
 
   return (
     <Panel.Body>
-      <BaseTable data={reportData?.data} {...{  columns }} />
+      <BaseTable data={reportData?.data} {...{ columns }} />
     </Panel.Body>
   );
 };

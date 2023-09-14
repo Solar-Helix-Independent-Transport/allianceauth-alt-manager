@@ -1,6 +1,6 @@
 import logging
-from allianceauth.eveonline.models import EveCharacter
 
+from allianceauth.eveonline.models import EveCharacter
 from esi.clients import EsiClientProvider
 from esi.errors import TokenError
 from esi.models import Token
@@ -8,7 +8,8 @@ from esi.models import Token
 logger = logging.getLogger(__name__)
 esi = EsiClientProvider()
 
-def get_corp_token(corp_id, scopes, req_roles = None):
+
+def get_corp_token(corp_id, scopes, req_roles=None):
     """
     Helper method to get a token for a specific character from a specific corp with specific scopes
     :param corp_id: Corp to filter on.
@@ -28,7 +29,7 @@ def get_corp_token(corp_id, scopes, req_roles = None):
         for token in tokens:
             try:
                 roles = esi.client.Character.get_characters_character_id_roles(character_id=token.character_id,
-                                                                                        token=token.valid_access_token()).result()
+                                                                               token=token.valid_access_token()).result()
                 has_roles = False
                 for role in roles.get('roles', []):
                     if role in req_roles:

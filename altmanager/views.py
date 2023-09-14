@@ -2,6 +2,7 @@ import json
 import xml.etree.ElementTree as ET
 
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
+from authstats.models import Report
 from django.contrib import messages
 from django.contrib.auth.decorators import (login_required,
                                             permission_required,
@@ -12,8 +13,6 @@ from django.utils.translation import gettext_lazy as _
 from django_celery_beat.models import CrontabSchedule, PeriodicTask
 from esi.decorators import _check_callback, token_required
 from esi.views import sso_redirect
-
-from authstats.models import Report
 
 from . import __version__
 
