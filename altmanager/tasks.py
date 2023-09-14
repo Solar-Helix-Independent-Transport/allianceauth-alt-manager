@@ -16,7 +16,6 @@ from esi.models import Token
 from requests.adapters import MaxRetryError
 
 from . import app_settings, providers
-from .models import Report, ReportDataThrough, ReportResults
 
 TZ_STRING = "%Y-%m-%dT%H:%M:%SZ"
 
