@@ -1,6 +1,6 @@
 import { loadCorps } from "../apis/Dashboard";
+import { useQuery } from "@tanstack/react-query";
 import React from "react";
-import { useQuery } from "react-query";
 import { generatePath } from "react-router";
 import { useNavigate } from "react-router-dom";
 import { useParams } from "react-router-dom";
@@ -17,7 +17,7 @@ const colourStyles = {
 
 const CorpSelect = () => {
   const navigate = useNavigate();
-  const { isLoading, data } = useQuery(["corp-select"], () => loadCorps());
+  const { isLoading, data } = useQuery({ queryKey: ["corp-select"], queryFn: () => loadCorps() });
   const handleChange = (value) => {
     let path = generatePath("/alts/show/:corporationID/", {
       corporationID: value,

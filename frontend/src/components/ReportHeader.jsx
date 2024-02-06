@@ -12,7 +12,6 @@ export const ReportHeader = ({ reportData, isLoading = false }) => {
   let aggregates = reportData?.headers?.filter((r) => r?.aggregate);
   return (
     <div>
-      <ProgressBar active={isLoading} now={100} style={{ margin: "0", height: "3px" }} />
       <div className="panel" style={{ display: "flex" }}>
         <CorporationLogo
           corporation_id={corporationID}

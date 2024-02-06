@@ -1,0 +1,16 @@
+{
+  "_@libs-7GpMRMbO.js": {
+    "file": "assets/@libs-7GpMRMbO.js"
+  },
+  "_@react-router-z6R2XyXi.js": {
+    "file": "assets/@react-router-z6R2XyXi.js",
+    "imports": ["_@libs-7GpMRMbO.js"]
+  },
+  "index.html": {
+    "css": ["assets/index-wyzNN-cK.css"],
+    "file": "assets/index-_soZPFl_.js",
+    "imports": ["_@libs-7GpMRMbO.js", "_@react-router-z6R2XyXi.js"],
+    "isEntry": true,
+    "src": "index.html"
+  }
+}
