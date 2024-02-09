@@ -36,15 +36,11 @@ def get_corps_for_user(user: User):
     tokens = None
     if user.is_superuser or user.has_perm("altmanager.su_access"):
         tokens = Token.objects.all(
-        ).values_list(
-            "character__character_id", flat=True
         ).require_scopes("esi-corporations.read_corporation_membership.v1")
     else:
         tokens = Token.objects \
             .filter(character_id__in=user.character_ownerships.all(
-            ).values_list(
-                "character__character_id", flat=True)
-            ).require_scopes("esi-corporations.read_corporation_membership.v1")
+            )).require_scopes("esi-corporations.read_corporation_membership.v1")
 
     for c in EveCharacter.objects.filter(
             character_id__in=tokens.values_list("character_id")):
