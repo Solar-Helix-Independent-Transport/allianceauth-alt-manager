@@ -34,7 +34,7 @@ def get_corps_for_user(user: User):
     out = {}
 
     tokens = None
-    if user.is_superuser() or user.has_perm("altmanager.su_access"):
+    if user.is_superuser or user.has_perm("altmanager.su_access"):
         tokens = Token.objects.all(
         ).values_list(
             "character__character_id", flat=True
