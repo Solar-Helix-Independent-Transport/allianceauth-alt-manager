@@ -33,11 +33,21 @@ api = NinjaAPI(title="Alt Manager API", version="0.0.1",
 def get_corps_for_user(user: User):
     out = {}
 
-    tokens = Token.objects \
-        .filter(character_id__in=user.character_ownerships.all().values_list("character__character_id", flat=True)) \
-        .require_scopes("esi-corporations.read_corporation_membership.v1")
+    tokens = None
+    if user.is_superuser() or user.has_perm("altmanager.su_access"):
+        tokens = Token.objects.all(
+        ).values_list(
+            "character__character_id", flat=True
+        ).require_scopes("esi-corporations.read_corporation_membership.v1")
+    else:
+        tokens = Token.objects \
+            .filter(character_id__in=user.character_ownerships.all(
+            ).values_list(
+                "character__character_id", flat=True)
+            ).require_scopes("esi-corporations.read_corporation_membership.v1")
 
-    for c in EveCharacter.objects.filter(character_id__in=tokens.values_list("character_id")):
+    for c in EveCharacter.objects.filter(
+            character_id__in=tokens.values_list("character_id")):
         if not 1000000 <= c.corporation_id <= 2000000:
             if c.corporation_id not in out:
                 out[c.corporation_id] = {
@@ -51,6 +61,10 @@ def get_corps_for_user(user: User):
     tags=["Corps"]
 )
 def get_stats_for_corp(request, corp_id: int):
+    if not (request.user.has_perm("altmanager.su_access") or
+            request.user.has_perm("altmanager.basic_access")):
+        return 403, "Access Denied"
+
     if not request.user.is_superuser:
         if corp_id not in get_corps_for_user(request.user):
             return 403, "Access Denied"

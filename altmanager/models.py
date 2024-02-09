@@ -31,6 +31,8 @@ class AltManagerConfiguration(SingletonModel):
              'Can access alt manager module'),
             ('restricted_corps',
              'Can access restricted corps.'),
+            ('su_access',
+             'Can access ALL corps.'),
         )
 
         default_permissions = []
