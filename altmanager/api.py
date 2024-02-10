@@ -59,11 +59,11 @@ def get_corps_for_user(user: User):
 def get_stats_for_corp(request, corp_id: int):
     if not (request.user.has_perm("altmanager.su_access") or
             request.user.has_perm("altmanager.basic_access")):
-        return 403, "Access Denied"
+        return 403, f"Access Denied to {request.user} for {corp_id} No Perms"
 
     if not request.user.is_superuser:
         if corp_id not in get_corps_for_user(request.user):
-            return 403, "Access Denied"
+            return 403, f"Access Denied to {request.user} for {corp_id} Not in visible"
 
     if corp_id == 0:
         return 200, {"corporation": " ",
