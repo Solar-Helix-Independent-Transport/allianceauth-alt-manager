@@ -1,0 +1,42 @@
+[build-system]
+build-backend = "hatchling.build"
+requires = [
+    "hatchling",
+]
+
+[project]
+name = "allianceauth-alt-manager"
+description = "Alliance Auth Plugin"
+readme = "README.md"
+license = {file = "LICENSE"}
+authors = [
+    { name = "AaronKable", email = "aaronkable@gmail.com" },
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Web Environment",
+    "Framework :: Django",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.9",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
+]
+dynamic = [
+    "version",
+]
+dependencies = [
+    "django-ninja<2.0.0,>=1.0.1",
+    "django-solo>=2.1",
+]
+[project.urls]
+Homepage = "https://github.com/Solar-Helix-Independent-Transport/allianceauth-alt-manager"
+
+[tool.hatch.version]
+path = "altmanager/__init__.py"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/altmanager",
+]

@@ -6,6 +6,8 @@ from esi.errors import TokenError
 from esi.models import Token
 
 logger = logging.getLogger(__name__)
+
+
 esi = EsiClientProvider()
 
 
@@ -28,8 +30,10 @@ def get_corp_token(corp_id, scopes, req_roles=None):
     if req_roles:
         for token in tokens:
             try:
-                roles = esi.client.Character.get_characters_character_id_roles(character_id=token.character_id,
-                                                                               token=token.valid_access_token()).result()
+                roles = esi.client.Character.get_characters_character_id_roles(
+                    character_id=token.character_id,
+                    token=token.valid_access_token()
+                ).result()
                 has_roles = False
                 for role in roles.get('roles', []):
                     if role in req_roles:

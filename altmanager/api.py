@@ -6,8 +6,6 @@ from datetime import timedelta
 from typing import List
 
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
-from authstats import providers, schema
-from authstats.tasks import run_report_for_corp
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.db.models import QuerySet
@@ -19,7 +17,7 @@ from ninja.pagination import LimitOffsetPagination, paginate
 from ninja.security import django_auth
 from ninja.types import DictStrAny
 
-from . import providers
+from . import providers, schema
 from .models import AltManagerConfiguration
 
 logger = logging.getLogger(__name__)
@@ -40,7 +38,9 @@ def get_corps_for_user(user: User):
     else:
         tokens = Token.objects \
             .filter(character_id__in=user.character_ownerships.all(
-            ).values_list("character__character_id")).require_scopes("esi-corporations.read_corporation_membership.v1")
+            ).values_list(
+                "character__character_id"
+            )).require_scopes("esi-corporations.read_corporation_membership.v1")
 
     for c in EveCharacter.objects.filter(
             character_id__in=tokens.values_list("character_id")):
@@ -57,8 +57,13 @@ def get_corps_for_user(user: User):
     tags=["Corps"]
 )
 def get_stats_for_corp(request, corp_id: int):
-    if not (request.user.has_perm("altmanager.su_access") or
-            request.user.has_perm("altmanager.basic_access")):
+    if not (
+        request.user.has_perm(
+            "altmanager.su_access"
+        ) or request.user.has_perm(
+            "altmanager.basic_access"
+        )
+    ):
         logger.warning(
             f"Access Denied to {request.user} for {corp_id} No Perms")
         return 403, "Access Denied No Perms"
@@ -67,7 +72,7 @@ def get_stats_for_corp(request, corp_id: int):
         if corp_id not in get_corps_for_user(request.user):
             logger.warning(
                 f"Access Denied to {request.user} for {corp_id} Not visible")
-            return 403, f"Access Denied Not Visible"
+            return 403, "Access Denied Not Visible"
 
     if corp_id == 0:
         return 200, {"corporation": " ",
@@ -97,7 +102,7 @@ def get_stats_for_corp(request, corp_id: int):
         return 200, {"corporation": char.corporation_name,
                      # "character":{character_char,
                      "data": new_names,
-                     "unknowns": member_count-len(known_ids),
+                     "unknowns": member_count - len(known_ids),
                      "knowns": len(known_ids)}
     except Exception as e:
         logger.exception(e)
