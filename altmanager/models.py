@@ -17,6 +17,8 @@ class AltManagerConfiguration(SingletonModel):
 
     restricted_corps = models.ManyToManyField(EveCorporationInfo)
 
+    member_corps = models.ManyToManyField(EveCorporationInfo, related_name="member_corp")
+
     days_before_revoke = models.IntegerField(
         default=5,
         help_text="How many days of grace to give before revoking approvals"
