@@ -19,6 +19,7 @@ dev:
 	pip install --upgrade pip
 	pip install wheel -U
 	pip install tox -U
+	pip install hatch -U
 	pip install -e .
 
 test:
@@ -33,7 +34,7 @@ buildjs:
 
 package:
 	cd frontend;yarn install;yarn build;find 'build/' -name '*.js' -exec sed -i -e 's/\/\/# sourceMappingURL=/\/\/# sourceMappingURL=\/static\/reports\/static\/js\//g' {} \;
-	python setup.py sdist
+	hatch build
 
 devui:
 	cd frontend;yarn install;yarn start
