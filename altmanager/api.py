@@ -10,6 +10,7 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.db.models import QuerySet
 from django.utils import timezone
+from esi.decorators import tokens_required
 from esi.errors import TokenExpiredError
 from esi.models import Token
 from ninja import Field, NinjaAPI, Schema
@@ -18,7 +19,9 @@ from ninja.security import django_auth
 from ninja.types import DictStrAny
 
 from . import providers, schema
-from .models import AltManagerConfiguration
+from .models import AltCorpRecord, AltManagerConfiguration
+
+REQUIRED_SCOPES = ["esi-corporations.read_corporation_membership.v1"]
 
 logger = logging.getLogger(__name__)
 
@@ -116,3 +119,150 @@ def get_stats_for_corp(request, corp_id: int):
 )
 def get_corps(request):
     return list(get_corps_for_user(request.user).values())
+
+
+@api.get(
+    "/get_account_corps",
+    response={200: List[schema.Corporation]},
+    tags=["Corps"]
+)
+def get_account_corps(request):
+    corporations = {}
+
+    members = AltManagerConfiguration.get_member_corporation_ids()
+
+    for _co in request.user.character_ownerships.all():
+        _c = _co.character
+        if _c.corporation_id not in members:
+            if _c.corporation_id not in corporations and _c.corporation_id > 2000000:
+                corporations[_c.corporation_id] = {
+                    "corporation_name": _c.corporation_name,
+                    "corporation_id": _c.corporation_id,
+                }
+
+    return list(corporations.values())
+
+
+@api.get(
+    "/get_sanctionable_corps",
+    response={200: List[schema.Sanction]},
+    tags=["Corps"]
+)
+@tokens_required(scopes=REQUIRED_SCOPES)
+def get_sanctionable_corps(request, *args):
+    output = {}
+
+    try:
+        tokens = args[0] if isinstance(
+            args[0], QuerySet[Token]) else Token.objects.none()
+    except IndexError:
+        tokens = Token.objects.none()
+
+    members = AltManagerConfiguration.get_member_corporation_ids()
+
+    characters = EveCharacter.objects.filter(
+        character_id__in=tokens.values_list("character_id")
+    )
+
+    sanctions = AltCorpRecord.objects.filter(
+        request__owner__in=characters
+    )
+
+    for _s in sanctions:
+        _c = _s.request.corporation
+
+        known_members = EveCharacter.objects.filter(
+            corporation_id=_c.corporation_id,
+            character_ownership__isnull=False
+        ).count()
+
+        output[_c.corporation_id] = {
+            "corporation_name": _c.corporation_name,
+            "corporation_id": _c.corporation_id,
+            "alliance_name": (
+                _c.alliance.alliance_name if _c.alliance else None
+            ),
+            "alliance_id": _c.alliance.alliance_id if _c.alliance else None,
+            "owner": _s.request.owner,
+            "approver": _s.request.approver,
+            "sanctioner": _s.request.sanctioner,
+            "approved": _s.approved,
+            "sanctioned": _s.sanctioned,
+            "revoked": _s.revoked,
+            "revoked_reason": _s.revoked_reason,
+            "date": _s.request_date,
+            "member_count": _c.member_count,
+            "known_member_count": known_members
+        }
+
+    corporations = EveCorporationInfo.objects.filter(
+        corporation_id__in=characters.values_list("corporation_id")
+    )
+
+    for _c in corporations:
+        if _c.corporation_id > 2000000:
+            if _c.corporation_id not in members:
+                if _c.corporation_id not in output:
+                    _a = _c.alliance
+                    known_members = EveCharacter.objects.filter(
+                        corporation_id=_c.corporation_id,
+                        character_ownership__isnull=False
+                    ).count()
+                    output[_c.corporation_id] = {
+                        "corporation_name": _c.corporation_name,
+                        "corporation_id": _c.corporation_id,
+                        "alliance_name": (
+                            _a.alliance_name if _a else None
+                        ),
+                        "alliance_id": (
+                            _a.alliance_id if _a else None
+                        ),
+                        "member_count": _c.member_count,
+                        "known_member_count": known_members
+                    }
+
+    return list(output.values())
+
+
+@api.get(
+    "/get_sanction_actions",
+    response={200: List[schema.Sanction]},
+    tags=["Corps"]
+)
+def get_sanction_actions(request):
+    output = {}
+
+    sanctions = AltCorpRecord.objects.visible_to(
+        request.user
+    ).filter(
+        request__owner__isnull=False,
+    )
+
+    for _s in sanctions:
+        _c = _s.request.corporation
+
+        known_members = EveCharacter.objects.filter(
+            corporation_id=_c.corporation_id,
+            character_ownership__isnull=False
+        ).count()
+
+        output[_c.corporation_id] = {
+            "corporation_name": _c.corporation_name,
+            "corporation_id": _c.corporation_id,
+            "alliance_name": (
+                _c.alliance.alliance_name if _c.alliance else None
+            ),
+            "alliance_id": _c.alliance.alliance_id if _c.alliance else None,
+            "owner": _s.request.owner,
+            "approver": _s.request.approver,
+            "sanctioner": _s.request.sanctioner,
+            "approved": _s.approved,
+            "sanctioned": _s.sanctioned,
+            "revoked": _s.revoked,
+            "revoked_reason": _s.revoked_reason,
+            "date": _s.request_date,
+            "member_count": _c.member_count,
+            "known_member_count": known_members
+        }
+
+    return list(output.values())

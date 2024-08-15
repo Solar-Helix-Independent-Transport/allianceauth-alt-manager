@@ -1,7 +1,9 @@
 from django.contrib import admin
-from django.utils.html import format_html
 from solo.admin import SingletonModelAdmin
 
-from .models import AltManagerConfiguration
+from .models import AltCorpHistory, AltCorpRecord, AltManagerConfiguration
 
 admin.site.register(AltManagerConfiguration, SingletonModelAdmin)
+
+admin.site.register(AltCorpRecord)
+admin.site.register(AltCorpHistory)

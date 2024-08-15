@@ -10,22 +10,36 @@ from django.db import models
 # from django.utils import timezone
 from solo.models import SingletonModel
 
+from .managers import SanctionManager
+
 logger = logging.getLogger(__name__)
 
 
 class AltManagerConfiguration(SingletonModel):
 
-    restricted_corps = models.ManyToManyField(EveCorporationInfo)
+    restricted_corps = models.ManyToManyField(
+        EveCorporationInfo,
+        blank=True,
+    )
 
-    member_corps = models.ManyToManyField(EveCorporationInfo, related_name="member_corp")
+    member_corps = models.ManyToManyField(
+        EveCorporationInfo,
+        blank=True,
+        related_name="member_corp"
+    )
 
     days_before_revoke = models.IntegerField(
         default=5,
         help_text="How many days of grace to give before revoking approvals"
     )
 
+    management_channel_id = models.IntegerField(
+        default=0,
+        help_text="Discord Channel ID to send manager notifications to."
+    )
+
     class Meta:
-        verbose_name = "Auth Reports Configuration"
+        verbose_name = "Alt Manager Configuration"
         permissions = (
             # Basic Alt Manager
             ('basic_access', 'Can access alt manager module'),
@@ -51,8 +65,116 @@ class AltManagerConfiguration(SingletonModel):
 
         default_permissions = []
 
+    @classmethod
+    def get_member_corporation_ids(cls):
+        return set(
+            list(
+                cls.get_solo().member_corps.all(
+                ).values_list(
+                    "corporation_id",
+                    flat=True
+                )
+            )
+        )
+
 
 class AltCorpRecord(models.Model):
+
+    objects = SanctionManager()
+
+    request_date = models.DateTimeField(auto_created=True)
+
+    actual_members = models.IntegerField(
+        default=None,
+        blank=True,
+        null=True,
+        help_text="Member count as detected via member endpoint."
+    )
+
+    sanctioned = models.BooleanField(default=False)
+
+    approved = models.BooleanField(default=False)
+
+    pending_revoke = models.DateTimeField(default=None, blank=True, null=True)
+
+    revoked = models.BooleanField(default=False)
+
+    revoked_reason = models.TextField(
+        blank=True,
+        null=True,
+        default=None,
+        help_text="The revoke/pending revoke reason"
+    )
+
+    def still_valid(self):
+        pass
+
+    def notify_owner(self, message=None):
+        pass
+
+    def notify_managers(self, message=None):
+        pass
+
+    def approve(self, approver=None, sanctioner=None):
+        if not approver and not sanctioner:
+            return False
+
+        if approver:
+            self.approved = True
+            self.request.approver = approver
+            self.request.approver_character_name = approver.character_name
+            self.request.approver_corporation_name = approver.corporation_name
+            self.request.save()
+            self.save()
+
+        if sanctioner:
+            self.sanctioned = True
+            self.request.sanctioner = sanctioner
+            self.request.sanctioner_character_name = sanctioner.character_name
+            self.request.sanctioner_corporation_name = sanctioner.corporation_name
+            self.request.save()
+            self.save()
+
+    def revoke(self, user=None, message=""):
+        usr = "Admin"
+        if user:
+            usr = user.profile.main_character.character_name
+
+        self.revoked_reason = f"Revoked by {usr} {message}"
+        self.revoked = True
+        self.sanctioned = False
+        self.save()
+
+    def clear_revoke(self):
+        self.revoked_reason = None
+        self.revoked = False
+        self.sanctioned = True
+        self.save()
+
+    def __str__(self):
+        try:
+            return (
+                f"{self.request_date} - "
+                f"{self.request.corporation_name} - "
+                f"{self.request.owner_character_name}"
+            )
+        except Exception:
+            return f"{self.id} - {self.request_date}"
+
+    class Meta:
+        default_permissions = []
+
+
+class AltCorpHistory(models.Model):
+
+    request = models.OneToOneField(
+        AltCorpRecord,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        default=True,
+        related_name="request"
+    )
 
     request_date = models.DateTimeField(auto_created=True)
 
@@ -80,15 +202,19 @@ class AltCorpRecord(models.Model):
 
     owner_character_name = models.CharField(
         max_length=250,
+        blank=True,
+        null=True,
+        default=None,
         help_text="The owner character name at time of claim"
     )
 
     owner_corporation_name = models.CharField(
         max_length=250,
+        blank=True,
+        null=True,
+        default=None,
         help_text="The owners corporation name at time of claim"
     )
-
-    sanctioned = models.BooleanField(default=False)
 
     sanctioner = models.ForeignKey(
         EveCharacter,
@@ -103,15 +229,19 @@ class AltCorpRecord(models.Model):
 
     sanctioner_character_name = models.CharField(
         max_length=250,
+        blank=True,
+        null=True,
+        default=None,
         help_text="The sanctioning character name at time of sanction"
     )
 
     sanctioner_corporation_name = models.CharField(
         max_length=250,
+        blank=True,
+        null=True,
+        default=None,
         help_text="The sanctioning characters corporation name at time of sanction"
     )
-
-    approved = models.BooleanField(default=False)
 
     approver = models.ForeignKey(
         EveCharacter,
@@ -125,21 +255,25 @@ class AltCorpRecord(models.Model):
 
     approver_character_name = models.CharField(
         max_length=250,
+        blank=True,
+        null=True,
+        default=None,
         help_text="The approving character name at time of sanction"
     )
 
     approver_corporation_name = models.CharField(
         max_length=250,
+        blank=True,
+        null=True,
+        default=None,
         help_text="The approving characters corporation name at time of sanction"
     )
 
-    pending_revoke = models.DateTimeField(default=None, blank=True, null=True)
-
-    revoked = models.BooleanField(default=False)
-
-    revoked_reason = models.TextField(
-        help_text="The revoke/pending revoke reason"
-    )
+    def __str__(self):
+        try:
+            return f"{self.request_date} - {self.corporation_name} - {self.owner_character_name}"
+        except Exception:
+            return f"{self.id} - {self.request_date}"
 
     class Meta:
         default_permissions = []

@@ -23,8 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 @shared_task(bind=True, base=QueueOnce, max_retries=None)
-def load_corp_data_and_cache(self, report_id, webhook_url):
+def check_all_alt_corps(self):
     """
-        Export the Stats for this corp
+        Check all alt corps and revoke if needed
     """
-    pass

@@ -1,0 +1,267 @@
+{% extends 'allianceauth/base-bs5.html' %}
+{% load i18n %}
+{% load static %}
+{% load humanize %}
+{% load navactive %}
+{% block page_title %}{{page_title}}{% endblock %}
+{% block header_nav_brand %}{{page_title}}{% endblock %}
+{% block header_nav_collapse_left %}
+<li class="nav-item">
+    <a class="nav-link {% navactive request 'altmanager:request' %}" href="{% url 'altmanager:request' %}">{% translate "Request" %}</a>
+</li>
+<li class="nav-item">
+    <a class="nav-link {% navactive request 'altmanager:sanctions' %}" href="{% url 'altmanager:sanctions' %}">{% translate "Sanctions" %}</a>
+</li>
+<li class="nav-item">
+    <a class="nav-link {% navactive request 'altmanager:manage' %}" href="{% url 'altmanager:manage' %}">{% translate "Manage" %}</a>
+</li>
+{% endblock header_nav_collapse_left %}
+{% block content %}
+    <div class="m-2">
+        <!-- <h4 class="strikeOut">How to Guide</h4>
+        <div class="">
+            <div class="d-flex justify-content-around flex-wrap text-center">
+                <div class="m-2 flex-even" style="min-width: 350px">
+                    <div class="text-center"><h5>Step 1-3</h5></div>
+                    <div class="">
+                        <h6 class="strikeOut mb-1">Completed by Members</h6>
+                        <p>
+                            Members have added a token and all the characters to Auth and requested Sanctioning.
+                        </p>
+                    </div>
+                </div>
+                <div class="m-2 flex-even" style="min-width: 350px">
+                    <div class="text-center"><h5>Step 4</h5></div>
+                    <div class="">
+                        <h6 class="strikeOut mb-1">Sanctioning</h6>
+                        <p>
+                            Corporation Leadership you can approve the below requests.
+                        </p>
+                        <p class="text-warning">
+                            <b>
+                                This is you and your Corporation accepting responsibility for the actions of all members in this alt corporation
+                            </b>
+                        </p>
+                    </div>
+                </div>
+                <div class="m-2 flex-even" style="min-width: 350px">
+                    <div class="text-center"><h5>Step 5</h5></div>
+                    <div class="">
+                        <h6 class="strikeOut mb-1">Approvals</h6>
+                        <p>
+                            Wait for Alliance Leadership to Approve/Action or Reject the application.
+                        </p>
+                        <p>
+                            The member will be contacted with the next steps.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div> -->
+    <div class="m-2">
+        <h4 class="strikeOut text-center" >All Sanctions</h4>
+        <div class="">
+            <div >
+                <table id="table-manage" class="table ">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th>Name</th>
+                            <th class=""></th>
+                            <th class="">Owner</th>
+                            <th class=""></th>
+                            <th class="">Sanctioner</th>
+                            <th class=""></th>
+                            <th class="">Approver</th>
+                            <th class="text-center">Members</th>
+                            <th class="text-center">State</th>
+                            <th class="text-end">Actions</th>
+                            <th>Owner</th>
+                            <th>State</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for corp in corporations %}
+                        <tr>
+                            <td class="align-middle">
+                                <img src="https://images.evetech.net/corporations/{{ corp.corporation_id }}/logo" width="32px" heght="32px"/>
+                                {% if corp.alliance_id %}
+                                    <img class="ms-2" src="https://images.evetech.net/alliances/{{ corp.alliance_id }}/logo" width="32px" heght="32px"/>
+                                {% endif %}
+                            </td>
+                            <td class="align-middle">
+                                {{ corp.corporation_name }}
+                                {% if corp.alliance_name %}
+                                    <figcaption class="figure-caption">{{corp.alliance_name}}</figcaption>
+                                {% endif %}
+                            </td>
+                            <td class="align-middle text-center">
+                                <img src="https://images.evetech.net/characters/{{ corp.owner.character_id }}/portrait" width="32px" heght="32px"/>
+                            </td>
+                            <td class="align-middle">
+                                {{ corp.owner.character_name }}
+                                <figcaption class="figure-caption">{{corp.owner.corporation_name}}</figcaption>
+                            </td>
+                            <td class="align-middle text-center">
+                                <img src="https://images.evetech.net/characters/{{ corp.sanctioner.character_id }}/portrait" width="32px" heght="32px"/>
+                            </td>
+                            <td class="align-middle">
+                                {{ corp.sanctioner.character_name }}
+                                <figcaption class="figure-caption">{{corp.sanctioner.corporation_name}}</figcaption>
+                            </td>
+                            <td class="align-middle text-center">
+                                <img src="https://images.evetech.net/characters/{{ corp.approver.character_id }}/portrait" width="32px" heght="32px"/>
+                            </td>
+                            <td class="align-middle">
+                                {{ corp.approver.character_name }}
+                                <figcaption class="figure-caption">{{corp.approver.corporation_name}}</figcaption>
+                            </td>
+                            <td class="align-middle text-center {% if corp.member_count == corp.known_member_count %}text-success{% else %}text-danger{% endif %}">
+                                {% if corp.known_member_count %}
+                                    {{ corp.known_member_count }} / {{ corp.member_count }}
+                                {% endif %}
+                            </td>
+                            <td class="align-middle text-center" >
+                                {% if corp.revoked %}
+                                    <span class="badge bg-danger">Revoked</span>
+                                    {% if corp.revoked_reason %}
+                                        <figcaption class="figure-caption">{{corp.revoked_reason}}</figcaption>
+                                    {% endif %}
+                                {% elif corp.approved %}
+                                    <span class="badge bg-success">Active</span>
+                                {% elif corp.sanctioned %}
+                                    <span class="badge bg-success">Sanctioned by: {{ corp.sanctioner.character_name }}</span>
+                                {% elif corp.owner %}
+                                    <span class="badge bg-primary">Awaiting Sanction Approval</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Unknown State</span>
+                                {% endif %}
+                            </td>
+                            <td class="align-middle text-end">
+                                {% if corp.revoked %}
+                                    <a
+                                        class="btn btn-sm bg-danger"
+                                        href="/alts/clear_revoke_corp/{{corp.corporation_id}}"
+                                    >Clear Revoke</a>
+                                    <a
+                                    class="btn btn-sm bg-danger"
+                                    href="/alts/delete_sanction_corp/{{corp.corporation_id}}"
+                                    >Delete</a>
+
+                                {% elif corp.approved %}
+                                    <a
+                                        class="btn btn-sm bg-danger"
+                                        href="/alts/revoke_sanction_corp/{{corp.corporation_id}}"
+                                    >Revoke Approval</a>
+                                {% elif corp.sanctioned %}
+                                    <a
+                                        class="btn btn-sm bg-success"
+                                        href="/alts/approve_corp/{{corp.corporation_id}}"
+                                    >Approve</a>
+                                    <a
+                                        class="btn btn-sm bg-danger"
+                                        href="/alts/revoke_approval_corp/{{corp.corporation_id}}"
+                                    >Revoke Approval</a>
+                                {% else %}
+                                    {% if corp.known_member_count != corp.member_count %}
+                                        <span class="text-danger">Unable to Sanction (Add all Members)</span>
+                                    {% else %}
+                                        <a
+                                            class="btn btn-sm bg-success"
+                                            href="/alts/sanction_corp/{{corp.corporation_id}}"
+                                        >Approve</a>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                            <td>
+                                {{ corp.sanctioner.character_name }}
+                            </td>
+                            <td>
+                                {% if corp.revoked %}
+                                    Revoked
+                                {% elif corp.approved %}
+                                    Active
+                                {% elif corp.sanctioned %}
+                                    Sanctioned
+                                {% elif corp.owner %}
+                                    Awaiting Sanction Approval
+                                {% else %}
+                                    Unknown State
+                                {% endif %}
+                            </td>
+
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <!-- <div class="text-center">
+            <h6 class="strikeOut mb-3">Important Notes</h6>
+            <figcaption class="figure-caption">If no corporations show and you believe this is in error, please refresh the page.</figcaption>
+            <figcaption class="figure-caption">If a corporation is not visible make sure you have added a membership token.</figcaption>
+            <figcaption class="figure-caption">If you do not maintain 100% member compliance your alt corp approval will be revoked.</figcaption>
+        </div> -->
+    </div>
+{% endblock %}
+{% block extra_javascript %}
+    <script src="https://cdn.datatables.net/2.1.3/js/dataTables.js"></script>
+    <script src="https://cdn.datatables.net/2.1.3/js/dataTables.bootstrap5.js"></script>
+    {% include 'bundles/filterdropdown-js.html' %}
+
+    <script>
+        $(document).ready( function () {
+                $('#table-manage').DataTable({
+                    filterDropDown:
+                    {
+                        columns: [
+                            {
+                                idx: 11
+                            },
+                            {
+                                idx: 12
+                            }
+                        ],
+                        bootstrap: true,
+                        bootstrap_version: 5
+                    },
+                    order: [[1, 'desc']],
+                    columnDefs: [
+                        { visible: false, targets: [11, 12] },
+                        { searchable: false, targets: 10 },
+                        { sortable: false, targets: [0,2,4,6,8,10]}
+                    ],
+                    responsive: true
+                })
+            }
+        );
+    </script>
+{% endblock %}
+{% block extra_script %}
+{% endblock %}
+{% block extra_css %}
+    <style>
+        .strikeOut {
+            display: flex;
+            flex-direction: row;
+            margin: 0;
+        }
+        .strikeOut:before,
+        .strikeOut:after {
+            content: "";
+            flex: 1 1;
+            border-bottom: 1px solid var(--bs-border-color);
+            margin: auto;
+        }
+        .strikeOut:after {
+            margin-left: 10px;
+        }
+        .strikeOut:before {
+            margin-right: 10px;
+        }
+        .flex-even {
+            flex: 1;
+        }
+    </style>
+{% endblock %}
