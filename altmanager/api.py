@@ -158,6 +158,8 @@ def get_sanctionable_corps(request, *args):
     except IndexError:
         tokens = Token.objects.none()
 
+    logger.warning(tokens)
+
     members = AltManagerConfiguration.get_member_corporation_ids()
 
     characters = EveCharacter.objects.filter(
@@ -195,7 +197,7 @@ def get_sanctionable_corps(request, *args):
             "known_member_count": known_members
         }
 
-    print(output)
+    logger.warning(output)
 
     corporations = EveCorporationInfo.objects.filter(
         corporation_id__in=characters.values_list("corporation_id")
@@ -222,7 +224,7 @@ def get_sanctionable_corps(request, *args):
                         "member_count": _c.member_count,
                         "known_member_count": known_members
                     }
-    print(output)
+    logger.warning(output)
 
     return list(output.values())
 
