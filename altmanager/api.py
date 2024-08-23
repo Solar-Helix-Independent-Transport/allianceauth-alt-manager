@@ -163,7 +163,7 @@ def get_sanctionable_corps(request, *args):
     members = AltManagerConfiguration.get_member_corporation_ids()
 
     _chars = list(
-        tokens.values_list("character_id")
+        tokens.values_list("character_id", flat=True)
     )
 
     mc_id = request.user.profile.main_character.character_id
