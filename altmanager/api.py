@@ -195,6 +195,8 @@ def get_sanctionable_corps(request, *args):
             "known_member_count": known_members
         }
 
+    print(output)
+
     corporations = EveCorporationInfo.objects.filter(
         corporation_id__in=characters.values_list("corporation_id")
     )
@@ -220,6 +222,7 @@ def get_sanctionable_corps(request, *args):
                         "member_count": _c.member_count,
                         "known_member_count": known_members
                     }
+    print(output)
 
     return list(output.values())
 
