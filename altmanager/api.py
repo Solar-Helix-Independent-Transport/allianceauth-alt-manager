@@ -162,8 +162,17 @@ def get_sanctionable_corps(request, *args):
 
     members = AltManagerConfiguration.get_member_corporation_ids()
 
+    _chars = list(
+        tokens.values_list("character_id")
+    )
+
+    mc_id = request.user.profile.main_character.character_id
+
+    if mc_id not in _chars:
+        _chars.append(mc_id)
+
     characters = EveCharacter.objects.filter(
-        character_id__in=tokens.values_list("character_id")
+        character_id__in=_chars
     )
 
     logger.warning(f"char {characters}")
