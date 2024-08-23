@@ -166,13 +166,13 @@ def get_sanctionable_corps(request, *args):
         character_id__in=tokens.values_list("character_id")
     )
 
-    logger.warning("char", characters)
+    logger.warning(f"char {characters}")
 
     sanctions = AltCorpRecord.objects.filter(
         request__owner__in=characters
     )
 
-    logger.warning("alts", sanctions)
+    logger.warning(f"alts {sanctions}")
 
     for _s in sanctions:
         _c = _s.request.corporation
@@ -203,7 +203,7 @@ def get_sanctionable_corps(request, *args):
             "known_member_count": known_members
         }
 
-    logger.warning("req ", output)
+    logger.warning(f"req  {output}")
 
     corporations = EveCorporationInfo.objects.filter(
         corporation_id__in=characters.values_list("corporation_id")
@@ -232,7 +232,7 @@ def get_sanctionable_corps(request, *args):
                         "known_member_count": known_members
                     }
 
-    logger.warning("all ", output)
+    logger.warning(f"out  {output}")
 
     return list(output.values())
 
