@@ -184,7 +184,7 @@ def sanction_approve_corp(request, corp_id=None):
         mc = request.user.profile.main_character
         req = vis.first()
 
-        req.sanctioner(sanctioner=mc)
+        req.approve(sanctioner=mc)
 
         messages.info(
             request,
