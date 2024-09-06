@@ -11,13 +11,13 @@
     <li class="nav-item">
         <a class="nav-link {% navactive request 'altmanager:request' %}" href="{% url 'altmanager:request' %}">{% translate "Request" %}</a>
     </li>
-{% else %}
+{% endif %}
 
 {% if perms.altmanager.can_sanction_own_corp %}
     <li class="nav-item">
         <a class="nav-link {% navactive request 'altmanager:sanctions' %}" href="{% url 'altmanager:sanctions' %}">{% translate "Sanctions" %}</a>
     </li>
-{% else %}
+{% endif %}
 
 {% if perms.altmanager.can_manage_alt_corp %}
     <li class="nav-item">
