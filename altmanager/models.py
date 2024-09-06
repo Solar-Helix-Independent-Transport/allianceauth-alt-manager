@@ -1,5 +1,6 @@
 import logging
 
+from allianceauth.eveonline.evelinks import dotlan, evewho, zkillboard
 # from allianceauth.authentication.models import (CharacterOwnership, State,
 #                                                 UserProfile)
 # from allianceauth.eveonline.evelinks import dotlan, eveimageserver, zkillboard
@@ -13,6 +14,23 @@ from solo.models import SingletonModel
 from .managers import SanctionManager
 
 logger = logging.getLogger(__name__)
+
+RED = 16711680
+GREEN = 1244928
+BLUE = 41727
+
+
+def send_discord_message(user_pk=None, channel_id=None, embed=None):
+    try:
+        from aadiscordbot.tasks import send_message
+        from discord import Embed
+        e = Embed.from_dict(embed)
+        if user_pk:
+            send_message(user_pk=user_pk, embed=e)
+        if channel_id:
+            send_message(channel_id=channel_id, embed=e)
+    except ImportError:
+        pass
 
 
 class AltManagerConfiguration(SingletonModel):
@@ -33,7 +51,7 @@ class AltManagerConfiguration(SingletonModel):
         help_text="How many days of grace to give before revoking approvals"
     )
 
-    management_channel_id = models.IntegerField(
+    management_channel_id = models.BigIntegerField(
         default=0,
         help_text="Discord Channel ID to send manager notifications to."
     )
@@ -78,6 +96,17 @@ class AltManagerConfiguration(SingletonModel):
         )
 
 
+class AltCorpTarget(models.Model):
+    name = models.CharField(max_length=255)
+    description = models.TextField(default=None, null=True, blank=True)
+
+    def __str__(self):
+        return f"Target: {self.name}"
+
+    class Meta:
+        default_permissions = []
+
+
 class AltCorpRecord(models.Model):
 
     objects = SanctionManager()
@@ -109,11 +138,66 @@ class AltCorpRecord(models.Model):
     def still_valid(self):
         pass
 
-    def notify_owner(self, message=None):
-        pass
+    def notify_owner(self, message):
+        embed = {
+            "title": f"Alt Manager Update - {self.request.corporation.corporation_name}",
+            "description": (
+                f"{message}\n\n**Corp:**\n"
+                f"[DotLan]({dotlan.corporation_url(self.request.corporation.corporation_name)})\n"
+                f"[zKill]({zkillboard.corporation_url(self.request.corporation.corporation_id)})\n"
+                f"[EvE Who]({evewho.corporation_url(self.request.corporation.corporation_id)})\n\n"
+            ),
+            "color": RED,
+            "thumbnail": {
+                "url": (
+                    "https://images.evetech.net/corporations/"
+                    f"{self.request.corporation.corporation_id}/logo"
+                )
+            }
+        }
 
-    def notify_managers(self, message=None):
-        pass
+        if not self.revoked:
+            if self.approved:
+                embed["color"] = GREEN
+            else:
+                embed["color"] = BLUE
+        else:
+            embed["color"] = RED
+
+        send_discord_message(user_pk=self.request.owner.character_ownership.user_id, embed=embed)
+
+    def notify_managers(self, message):
+
+        embed = {
+            "title": f"Alt Management Update - {self.request.corporation.corporation_name}",
+            "description": (
+                f"{message}\n\n**Corp:**\n"
+                f"[DotLan]({dotlan.corporation_url(self.request.corporation_name)})\n"
+                f"[zKill]({zkillboard.corporation_url(self.request.corporation.corporation_id)})\n"
+                f"[EvE Who]({evewho.corporation_url(self.request.corporation.corporation_id)})\n\n"
+                f"**Owner: {self.request.owner.character_name}**\n"
+                f"[Zkill]({zkillboard.character_url(self.request.owner.character_id)})\n"
+                f"[EvE Who]({evewho.character_url(self.request.owner.character_id)})\n"
+            ),
+            "color": RED,
+            "thumbnail": {
+                "url": (
+                    "https://images.evetech.net/corporations/"
+                    f"{self.request.corporation.corporation_id}/logo"
+                )
+            },
+        }
+
+        if not self.revoked:
+            if self.approved:
+                embed["color"] = GREEN
+            else:
+                embed["color"] = BLUE
+        else:
+            embed["color"] = RED
+
+        chid = AltManagerConfiguration.get_solo().management_channel_id
+        send_discord_message(channel_id=chid, embed=embed)
 
     def approve(self, approver=None, sanctioner=None):
         if not approver and not sanctioner:
@@ -174,6 +258,14 @@ class AltCorpHistory(models.Model):
         blank=True,
         default=True,
         related_name="request"
+    )
+
+    target = models.ForeignKey(
+        AltCorpTarget,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        default=None
     )
 
     request_date = models.DateTimeField(auto_created=True)

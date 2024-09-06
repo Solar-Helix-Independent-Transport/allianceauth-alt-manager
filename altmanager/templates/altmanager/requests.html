@@ -6,15 +6,23 @@
 {% block page_title %}{{page_title}}{% endblock %}
 {% block header_nav_brand %}{{page_title}}{% endblock %}
 {% block header_nav_collapse_left %}
-<li class="nav-item">
-    <a class="nav-link {% navactive request 'altmanager:request' %}" href="{% url 'altmanager:request' %}">{% translate "Request" %}</a>
-</li>
-<li class="nav-item">
-    <a class="nav-link {% navactive request 'altmanager:sanctions' %}" href="{% url 'altmanager:sanctions' %}">{% translate "Sanctions" %}</a>
-</li>
-<li class="nav-item">
-    <a class="nav-link {% navactive request 'altmanager:manage' %}" href="{% url 'altmanager:manage' %}">{% translate "Manage" %}</a>
-</li>
+{% if perms.altmanager.can_request_alt_corp %}
+    <li class="nav-item">
+        <a class="nav-link {% navactive request 'altmanager:request' %}" href="{% url 'altmanager:request' %}">{% translate "Request" %}</a>
+    </li>
+{% endif %}
+
+{% if perms.altmanager.can_sanction_own_corp %}
+    <li class="nav-item">
+        <a class="nav-link {% navactive request 'altmanager:sanctions' %}" href="{% url 'altmanager:sanctions' %}">{% translate "Sanctions" %}</a>
+    </li>
+{% endif %}
+
+{% if perms.altmanager.can_manage_alt_corp %}
+    <li class="nav-item">
+        <a class="nav-link {% navactive request 'altmanager:manage' %}" href="{% url 'altmanager:manage' %}">{% translate "Manage" %}</a>
+    </li>
+{% endif %}
 {% endblock header_nav_collapse_left %}
 {% block content %}
     <div class="m-2">
@@ -23,7 +31,7 @@
             <div class="d-flex justify-content-around flex-wrap text-center">
                 <div class="m-2 flex-even card" style="min-width: 350px">
                     <div class="text-center mt-1"><h5>Step 1</h5></div>
-                    <div class="">
+                    <div class="mb-auto">
                         <h6 class="strikeOut mb-1">Add Tokens</h6>
                         <p class="mx-1">
                             Add a corporate membership token for the corporation you want to apply with.
@@ -87,91 +95,89 @@
     <div class="m-2">
         <h4 class="strikeOut text-center" >My Corporations</h4>
         <div class="">
-            <div>
-                <table id="table-structs" class="table ">
-                    <thead>
-                        <tr>
-                            <th></th>
-                            <th>Name</th>
-                            <th class="text-center">Members</th>
-                            <th class="text-center">State</th>
-                            <th class="text-end">Actions</th>
-                            <th class="text-end">State</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    {% for corp in corporations %}
-                        <tr>
-                            <td class="align-middle">
-                                <img src="https://images.evetech.net/corporations/{{ corp.corporation_id }}/logo" width="32px" heght="32px"/>
-                                {% if corp.alliance_id %}
-                                    <img class="ms-2" src="https://images.evetech.net/alliances/{{ corp.alliance_id }}/logo" width="32px" heght="32px"/>
+            <table id="table-structs" class="table ">
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th>Name</th>
+                        <th class="text-center">Members</th>
+                        <th class="text-center">State</th>
+                        <th class="text-end">Actions</th>
+                        <th class="text-end">State</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for corp in corporations %}
+                    <tr>
+                        <td class="align-middle">
+                            <img src="https://images.evetech.net/corporations/{{ corp.corporation_id }}/logo" width="32px" heght="32px"/>
+                            {% if corp.alliance_id %}
+                                <img class="ms-2" src="https://images.evetech.net/alliances/{{ corp.alliance_id }}/logo" width="32px" heght="32px"/>
+                            {% endif %}
+                        </td>
+                        <td class="align-middle">
+                            {{ corp.corporation_name }}
+                            {% if corp.alliance_name %}
+                                <figcaption class="figure-caption">{{corp.alliance_name}}</figcaption>
+                            {% endif %}
+                        </td>
+                        <td class="align-middle text-center {% if corp.member_count == corp.known_member_count %}text-success{% else %}text-danger{% endif %}">
+                            {% if corp.known_member_count %}
+                                {{ corp.known_member_count }} / {{ corp.member_count }}
+                            {% endif %}
+                        </td>
+                        <td class="align-middle text-center" >
+                            {% if corp.revoked %}
+                                <span class="badge bg-danger">Revoked</span>
+                                {% if corp.revoked_reason %}
+                                    <figcaption class="figure-caption">{{corp.revoked_reason}}</figcaption>
                                 {% endif %}
-                            </td>
-                            <td class="align-middle">
-                                {{ corp.corporation_name }}
-                                {% if corp.alliance_name %}
-                                    <figcaption class="figure-caption">{{corp.alliance_name}}</figcaption>
-                                {% endif %}
-                            </td>
-                            <td class="align-middle text-center {% if corp.member_count == corp.known_member_count %}text-success{% else %}text-danger{% endif %}">
-                                {% if corp.known_member_count %}
-                                    {{ corp.known_member_count }} / {{ corp.member_count }}
-                                {% endif %}
-                            </td>
-                            <td class="align-middle text-center" >
-                                {% if corp.revoked %}
-                                    <span class="badge bg-danger">Revoked</span>
-                                    {% if corp.revoked_reason %}
-                                        <figcaption class="figure-caption">{{corp.revoked_reason}}</figcaption>
-                                    {% endif %}
-                                {% elif corp.approved %}
-                                    <span class="badge bg-success">Active</span>
-                                {% elif corp.sanctioned %}
-                                <span class="badge bg-success">Sanctioned by: {{ corp.sanctioner.character_name }}</span>
-                                <figcaption class="figure-caption">Pending Leadership Action</figcaption>
-                                {% elif corp.owner %}
-                                    <span class="badge bg-primary">Awaiting Sanction Approval</span>
+                            {% elif corp.approved %}
+                                <span class="badge bg-success">Active</span>
+                            {% elif corp.sanctioned %}
+                            <span class="badge bg-success">Sanctioned by: {{ corp.sanctioner.character_name }}</span>
+                            <figcaption class="figure-caption">Pending Leadership Action</figcaption>
+                            {% elif corp.owner %}
+                                <span class="badge bg-primary">Awaiting Sanction Approval</span>
+                            {% else %}
+                                <span class="badge bg-secondary">No Application</span>
+                            {% endif %}
+                        </td>
+                        <td class="align-middle text-end">
+                            {% if corp.revoked %}
+                            {% elif corp.approved %}
+                            {% elif corp.sanctioned %}
+                            {% elif corp.owner %}
+                                <!-- do nothing -->
+                            {% else %}
+                                {% if corp.known_member_count != corp.member_count %}
+                                    <span class="text-danger">Unable to Claim (Add all Members)</span>
                                 {% else %}
-                                    <span class="badge bg-secondary">No Application</span>
+                                    <a
+                                    class="btn btn-sm bg-secondary"
+                                    href="/alts/apply_corp/{{corp.corporation_id}}"
+                                    >Apply for Sanctioning</a>
                                 {% endif %}
-                            </td>
-                            <td class="align-middle text-end">
-                                {% if corp.revoked %}
-                                {% elif corp.approved %}
-                                {% elif corp.sanctioned %}
-                                {% elif corp.owner %}
-                                    <!-- do nothing -->
-                                {% else %}
-                                    {% if corp.known_member_count != corp.member_count %}
-                                        <span class="text-danger">Unable to Claim (Add all Members)</span>
-                                    {% else %}
-                                        <a
-                                        class="btn btn-sm bg-secondary"
-                                        href="/alts/apply_corp/{{corp.corporation_id}}"
-                                        >Apply for Sanctioning</a>
-                                    {% endif %}
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if corp.revoked %}
-                                    Revoked
-                                {% elif corp.approved %}
-                                    Active
-                                {% elif corp.sanctioned %}
-                                    Sanctioned
-                                {% elif corp.owner %}
-                                    Awaiting Sanction Approval
-                                {% else %}
-                                    Unknown State
-                                {% endif %}
-                            </td>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if corp.revoked %}
+                                Revoked
+                            {% elif corp.approved %}
+                                Active
+                            {% elif corp.sanctioned %}
+                                Sanctioned
+                            {% elif corp.owner %}
+                                Awaiting Sanction Approval
+                            {% else %}
+                                Unknown State
+                            {% endif %}
+                        </td>
 
-                        </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
         </div>
         <div class="text-center">
             <h6 class="strikeOut mb-3">Important Notes</h6>

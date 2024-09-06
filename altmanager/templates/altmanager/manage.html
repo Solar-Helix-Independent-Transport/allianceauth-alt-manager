@@ -6,15 +6,23 @@
 {% block page_title %}{{page_title}}{% endblock %}
 {% block header_nav_brand %}{{page_title}}{% endblock %}
 {% block header_nav_collapse_left %}
-<li class="nav-item">
-    <a class="nav-link {% navactive request 'altmanager:request' %}" href="{% url 'altmanager:request' %}">{% translate "Request" %}</a>
-</li>
-<li class="nav-item">
-    <a class="nav-link {% navactive request 'altmanager:sanctions' %}" href="{% url 'altmanager:sanctions' %}">{% translate "Sanctions" %}</a>
-</li>
-<li class="nav-item">
-    <a class="nav-link {% navactive request 'altmanager:manage' %}" href="{% url 'altmanager:manage' %}">{% translate "Manage" %}</a>
-</li>
+{% if perms.altmanager.can_request_alt_corp %}
+    <li class="nav-item">
+        <a class="nav-link {% navactive request 'altmanager:request' %}" href="{% url 'altmanager:request' %}">{% translate "Request" %}</a>
+    </li>
+{% endif %}
+
+{% if perms.altmanager.can_sanction_own_corp %}
+    <li class="nav-item">
+        <a class="nav-link {% navactive request 'altmanager:sanctions' %}" href="{% url 'altmanager:sanctions' %}">{% translate "Sanctions" %}</a>
+    </li>
+{% endif %}
+
+{% if perms.altmanager.can_manage_alt_corp %}
+    <li class="nav-item">
+        <a class="nav-link {% navactive request 'altmanager:manage' %}" href="{% url 'altmanager:manage' %}">{% translate "Manage" %}</a>
+    </li>
+{% endif %}
 {% endblock header_nav_collapse_left %}
 {% block content %}
     <div class="m-2">
@@ -76,8 +84,11 @@
                             <th class="">Approver</th>
                             <th class="text-center">Members</th>
                             <th class="text-center">State</th>
+                            <th class="text-center">Target</th>
                             <th class="text-end">Actions</th>
                             <th>Owner</th>
+                            <th>Sanctioner</th>
+                            <th>Approver</th>
                             <th>State</th>
                         </tr>
                     </thead>
@@ -138,16 +149,15 @@
                                     <span class="badge bg-danger">Unknown State</span>
                                 {% endif %}
                             </td>
+                            <td class="align-middle text-center" >
+                                {{ corp.target }}
+                            </td>
                             <td class="align-middle text-end">
                                 {% if corp.revoked %}
                                     <a
                                         class="btn btn-sm bg-danger"
                                         href="/alts/clear_revoke_corp/{{corp.corporation_id}}"
                                     >Clear Revoke</a>
-                                    <a
-                                    class="btn btn-sm bg-danger"
-                                    href="/alts/delete_sanction_corp/{{corp.corporation_id}}"
-                                    >Delete</a>
 
                                 {% elif corp.approved %}
                                     <a
@@ -173,9 +183,20 @@
                                         >Approve</a>
                                     {% endif %}
                                 {% endif %}
+                                <a
+                                    class="btn btn-sm bg-danger"
+                                    href="/alts/delete_sanction_corp/{{corp.corporation_id}}"
+                                >Delete</a>
+
+                            </td>
+                            <td>
+                                {{ corp.owner.character_name }}
                             </td>
                             <td>
                                 {{ corp.sanctioner.character_name }}
+                            </td>
+                            <td>
+                                {{ corp.approver.character_name }}
                             </td>
                             <td>
                                 {% if corp.revoked %}
@@ -217,10 +238,19 @@
                     {
                         columns: [
                             {
-                                idx: 11
+                                idx: 10
                             },
                             {
                                 idx: 12
+                            },
+                            {
+                                idx: 13
+                            },
+                            {
+                                idx: 14
+                            },
+                            {
+                                idx: 15
                             }
                         ],
                         bootstrap: true,
@@ -228,9 +258,9 @@
                     },
                     order: [[1, 'desc']],
                     columnDefs: [
-                        { visible: false, targets: [11, 12] },
-                        { searchable: false, targets: 10 },
-                        { sortable: false, targets: [0,2,4,6,8,10]}
+                        { visible: false, targets: [12, 13, 14, 15] },
+                        { searchable: false, targets: 11 },
+                        { sortable: false, targets: [0,2,4,6,8,10,11]}
                     ],
                     responsive: true
                 })

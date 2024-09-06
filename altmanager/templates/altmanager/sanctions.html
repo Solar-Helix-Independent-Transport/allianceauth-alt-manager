@@ -6,15 +6,25 @@
 {% block page_title %}{{page_title}}{% endblock %}
 {% block header_nav_brand %}{{page_title}}{% endblock %}
 {% block header_nav_collapse_left %}
-<li class="nav-item">
-    <a class="nav-link {% navactive request 'altmanager:request' %}" href="{% url 'altmanager:request' %}">{% translate "Request" %}</a>
-</li>
-<li class="nav-item">
-    <a class="nav-link {% navactive request 'altmanager:sanctions' %}" href="{% url 'altmanager:sanctions' %}">{% translate "Sanctions" %}</a>
-</li>
-<li class="nav-item">
-    <a class="nav-link {% navactive request 'altmanager:manage' %}" href="{% url 'altmanager:manage' %}">{% translate "Manage" %}</a>
-</li>
+
+{% if perms.altmanager.can_request_alt_corp %}
+    <li class="nav-item">
+        <a class="nav-link {% navactive request 'altmanager:request' %}" href="{% url 'altmanager:request' %}">{% translate "Request" %}</a>
+    </li>
+{% else %}
+
+{% if perms.altmanager.can_sanction_own_corp %}
+    <li class="nav-item">
+        <a class="nav-link {% navactive request 'altmanager:sanctions' %}" href="{% url 'altmanager:sanctions' %}">{% translate "Sanctions" %}</a>
+    </li>
+{% else %}
+
+{% if perms.altmanager.can_manage_alt_corp %}
+    <li class="nav-item">
+        <a class="nav-link {% navactive request 'altmanager:manage' %}" href="{% url 'altmanager:manage' %}">{% translate "Manage" %}</a>
+    </li>
+{% endif %}
+
 {% endblock header_nav_collapse_left %}
 {% block content %}
     <div class="m-2">
@@ -72,6 +82,7 @@
                             <th class="">Owner</th>
                             <th class="text-center">Members</th>
                             <th class="text-center">State</th>
+                            <th class="text-center">Target</th>
                             <th class="text-end">Actions</th>
                             <th >Owner</th>
                             <th >State</th>
@@ -121,6 +132,9 @@
                                     <span class="badge bg-secondary">No Application</span>
                                 {% endif %}
                             </td>
+                            <td class="align-middle text-center" >
+                                {{ corp.target }}
+                            </td>
                             <td class="align-middle text-end">
                                 {% if corp.revoked %}
                                     <span class="text-warning">Contact Leadership to Action Revoke!</span>
@@ -141,7 +155,7 @@
                                 {% endif %}
                             </td>
                             <td>
-                                {{ corp.sanctioner.character_name }}
+                                {{ corp.owner.character_name }}
                             </td>
                             <td>
                                 {% if corp.revoked %}
@@ -183,10 +197,13 @@
                 {
                     columns: [
                         {
-                            idx: 7
+                            idx: 6
                         },
                         {
                             idx: 8
+                        },
+                        {
+                            idx: 9
                         }
                     ],
                     bootstrap: true,
@@ -194,9 +211,9 @@
                 },
                 order: [[1, 'desc']],
                 columnDefs: [
-                    { visible: false, targets: [7, 8] },
-                    { searchable: false, targets: [0,2] },
-                    { sortable: false, targets: [0,2,4,5,6]}
+                    { visible: false, targets: [8,9] },
+                    { searchable: false, targets: [0,2,6] },
+                    { sortable: false, targets: [0,2,4,5,6,7]}
                 ],
                 responsive: true
             })

@@ -8,6 +8,11 @@ app_name = 'altmanager'
 urlpatterns = [
     re_path(r'^api/', api.urls),
     path('add_corp_token/', views.add_corp, name="add_corp"),
+    path(
+        'apply_corp/<int:corp_id>/<int:req_target_id>',
+        views.claim_corp,
+        name="claim_corp_target"
+    ),
     path('apply_corp/<int:corp_id>', views.claim_corp, name="claim_corp_direct"),
     path('show/', views.react_redirect, name='base'),
     path('show/<int:cid>', views.react_main, name='report'),

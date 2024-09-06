@@ -258,6 +258,13 @@ def get_sanction_actions(request):
         request.user
     ).filter(
         request__owner__isnull=False,
+    ).select_related(
+        "request",
+        "request__corporation",
+        "request__corporation__alliance",
+        "request__owner",
+        "request__approver",
+        "request__target",
     )
 
     for _s in sanctions:
@@ -284,7 +291,8 @@ def get_sanction_actions(request):
             "revoked_reason": _s.revoked_reason,
             "date": _s.request_date,
             "member_count": _c.member_count,
-            "known_member_count": known_members
+            "known_member_count": known_members,
+            "target": _s.request.target.name
         }
 
     return list(output.values())

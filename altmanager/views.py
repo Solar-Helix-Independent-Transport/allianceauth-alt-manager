@@ -1,24 +1,16 @@
-import json
-import xml.etree.ElementTree as ET
-
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
-from authstats.models import Report
 from django.contrib import messages
-from django.contrib.auth.decorators import (permission_required,
-                                            user_passes_test)
+from django.contrib.auth.decorators import permission_required
 from django.shortcuts import redirect, render
-from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
-from django_celery_beat.models import CrontabSchedule, PeriodicTask
-from esi.decorators import _check_callback, token_required
+from esi.decorators import token_required
 from esi.models import Token
-from esi.views import sso_redirect
 
 from . import __version__
 from .api import get_sanction_actions, get_sanctionable_corps
-from .models import AltCorpHistory, AltCorpRecord
-from .providers import esi, get_corp_token
+from .models import AltCorpHistory, AltCorpRecord, AltCorpTarget
+from .providers import esi
 
 REQUIRED_SCOPES = ["esi-corporations.read_corporation_membership.v1"]
 
@@ -65,7 +57,7 @@ def react_redirect(request):
     return redirect("altmanager:report", cid=cid)
 
 
-@permission_required("altmanager.basic_access")
+@permission_required("altmanager.can_request_alt_corp")
 def request_main(request):
     data = get_sanctionable_corps(request)
     return render(
@@ -101,7 +93,7 @@ def show_sanctions(request):
 
 
 @permission_required("altmanager.can_request_alt_corp")
-def claim_corp(request, corp_id=None):
+def claim_corp(request, corp_id=None, req_target_id=None):
     char_ids = EveCharacter.objects.filter(
         corporation_id=corp_id).values('character_id')
 
@@ -129,39 +121,64 @@ def claim_corp(request, corp_id=None):
             token=token.valid_access_token()
         ).results()
 
-        corp, created = EveCorporationInfo.objects.update_or_create(
-            corporation_id=corp_id,
-            defaults={
-                'member_count': len(members),
-                'corporation_ticker': char.corporation_ticker,
-                'corporation_name': char.corporation_name
-            }
-        )
-
-        record = AltCorpRecord.objects.create(
-            request_date=timezone.now(),
-            actual_members=len(members),
-        )
-
-        AltCorpHistory.objects.create(
-            request_date=timezone.now(),
-            request=record,
-            corporation=corp,
-            corporation_name=corp.corporation_name,
-            owner=request.user.profile.main_character,
-            owner_corporation_name=request.user.profile.main_character.corporation_name,
-            owner_character_name=request.user.profile.main_character.character_name,
-        )
-
-        messages.info(
-            request,
-            (
-                f"New claim created for {corp.corporation_name} "
-                f"for {request.user.profile.main_character}, sanction pending."
+        if req_target_id is not None:
+            corp, created = EveCorporationInfo.objects.update_or_create(
+                corporation_id=corp_id,
+                defaults={
+                    'member_count': len(members),
+                    'corporation_ticker': char.corporation_ticker,
+                    'corporation_name': char.corporation_name
+                }
             )
-        )
+
+            record = AltCorpRecord.objects.create(
+                request_date=timezone.now(),
+                actual_members=len(members),
+            )
+
+            AltCorpHistory.objects.create(
+                request_date=timezone.now(),
+                request=record,
+                corporation=corp,
+                target_id=req_target_id,
+                corporation_name=corp.corporation_name,
+                owner=request.user.profile.main_character,
+                owner_corporation_name=request.user.profile.main_character.corporation_name,
+                owner_character_name=request.user.profile.main_character.character_name,
+            )
+
+            _msg = (
+                f"New `{record.request.target.name}` request created for `{corp.corporation_name}` "
+                f"by `{request.user.profile.main_character}`, sanctioning pending."
+            )
+            messages.info(
+                request,
+                _msg
+            )
+            record.notify_managers(
+                _msg
+            )
+
+            return redirect('altmanager:request')
+        else:
+            targets = AltCorpTarget.objects.all()
+            return render(
+                request,
+                'altmanager/targets.html',
+                context={
+                    "version": __version__,
+                    "app_name": "altmanager",
+                    "page_title": "Alt Manager",
+                    'member_count': len(members),
+                    'corporation_ticker': char.corporation_ticker,
+                    'corporation_name': char.corporation_name,
+                    'corporation_id': char.corporation_id,
+                    "targets": targets
+                }
+            )
+
     else:
-        messages.error(request, "No tokens found?")
+        messages.error(request, "No Tokens found. Please add a membership token.")
 
     return redirect('altmanager:request')
 
@@ -186,11 +203,19 @@ def sanction_approve_corp(request, corp_id=None):
 
         req.approve(sanctioner=mc)
 
+        _msg = (
+            f"`{req.request.target.name}` sanctioning approved for "
+            f"`{req.request.corporation.corporation_name}`"
+        )
         messages.info(
             request,
-            (
-                f"Sanction approved for {req.request.corporation.corporation_name}"
-            )
+            _msg
+        )
+        req.notify_owner(
+            _msg
+        )
+        req.notify_managers(
+            _msg
         )
 
     return redirect('altmanager:sanctions')
@@ -214,11 +239,19 @@ def sanction_revoke_corp(request, corp_id=None):
         req = vis.first()
         req.revoke(request.user)
 
+        _msg = (
+            f"`{req.request.target.name}` sanctioning revoked for "
+            f"`{req.request.corporation.corporation_name}`"
+        )
         messages.info(
             request,
-            (
-                f"Sanction revoked for {req.request.corporation.corporation_name}"
-            )
+            _msg
+        )
+        req.notify_owner(
+            _msg
+        )
+        req.notify_managers(
+            _msg
         )
 
     return redirect('altmanager:sanctions')
@@ -241,11 +274,18 @@ def sanction_clear_revoke_corp(request, corp_id=None):
     else:
         req = vis.first()
         req.clear_revoke()
+        _msg = (
+            f"Revoke flag cleared for `{req.request.corporation.corporation_name}`"
+        )
         messages.info(
             request,
-            (
-                f"Revoke cleared for {req.request.corporation.corporation_name}"
-            )
+            _msg
+        )
+        req.notify_owner(
+            _msg
+        )
+        req.notify_managers(
+            _msg
         )
 
     return redirect('altmanager:manage')
@@ -268,13 +308,21 @@ def sanction_delete_corp(request, corp_id=None):
     else:
         req = vis.first()
         corp = req.request.corporation.corporation_name
-        req.delete()
+        req.revoked = True
+        _msg = (
+            f"`{req.request.target.name}` request deleted for `{corp}`."
+        )
         messages.info(
             request,
-            (
-                f"Request Deleted for {corp}"
-            )
+            _msg
         )
+        req.notify_owner(
+            _msg
+        )
+        req.notify_managers(
+            _msg
+        )
+        req.delete()
 
     return redirect('altmanager:manage')
 
@@ -299,11 +347,20 @@ def approve_corp(request, corp_id=None):
 
         req.approve(approver=mc)
 
+        _msg = (
+            f"`{req.request.target.name}` request fully approved for "
+            f"`{req.request.corporation.corporation_name}`"
+        )
+
         messages.info(
             request,
-            (
-                f"Sanction approved for {req.request.corporation.corporation_name}"
-            )
+            _msg
+        )
+        req.notify_owner(
+            _msg
+        )
+        req.notify_managers(
+            _msg
         )
 
     return redirect('altmanager:manage')
