@@ -89,7 +89,14 @@
                             </td>
                             <td class="align-middle text-center {% if corp.member_count == corp.known_member_count %}text-success{% else %}text-danger{% endif %}">
                                 {% if corp.known_member_count %}
-                                    {{ corp.known_member_count }} / {{ corp.member_count }}
+                                    {% if corp.known_member_count != corp.member_count %}
+                                        <a class="btn btn-sm btn-danger" href="/alts/detail/{{ corp.corporation_id }}">
+                                            <i class="fas fa-external-link-alt fa-fw me-2"></i>
+                                            {{ corp.known_member_count }} / {{ corp.member_count }}
+                                        </a>
+                                    {% else %}
+                                        {{ corp.known_member_count }} / {{ corp.member_count }}
+                                    {% endif %}
                                 {% endif %}
                             </td>
                             <td class="align-middle text-center" >
@@ -177,12 +184,11 @@
                 </table>
             </div>
         </div>
-        <!-- <div class="text-center">
+        <div class="text-center">
             <h6 class="strikeOut mb-3">Important Notes</h6>
-            <figcaption class="figure-caption">If no corporations show and you believe this is in error, please refresh the page.</figcaption>
-            <figcaption class="figure-caption">If a corporation is not visible make sure you have added a membership token.</figcaption>
-            <figcaption class="figure-caption">If you do not maintain 100% member compliance your alt corp approval will be revoked.</figcaption>
-        </div> -->
+            <figcaption class="figure-caption">ESI Member Count can be out of date due to the ESI cache. Please allow 24h to allow for changes in the membership.</figcaption>
+            <figcaption class="figure-caption">If the missing member list is empty then your issue is Cache. It will clear it's self.</figcaption>
+        </div>
     </div>
 {% endblock %}
 {% block extra_javascript %}

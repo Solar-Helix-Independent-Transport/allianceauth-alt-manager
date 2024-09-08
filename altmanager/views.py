@@ -95,6 +95,12 @@ def show_sanctions(request):
 @permission_required("altmanager.can_request_alt_corp")
 def alt_check(request, corp_id):
     _status, data = get_missing(request, corp_id)
+    if _status != 200:
+        messages.warning(
+            request,
+            f"Unable to lookup missing alts {_status} {data}"
+        )
+        return redirect('altmanager:request')
     return render(
         request,
         'altmanager/missing.html',
