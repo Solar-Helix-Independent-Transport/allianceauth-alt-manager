@@ -8,7 +8,7 @@ from esi.decorators import token_required
 from esi.models import Token
 
 from . import __version__
-from .api import get_sanction_actions, get_sanctionable_corps
+from .api import get_missing, get_sanction_actions, get_sanctionable_corps
 from .models import AltCorpHistory, AltCorpRecord, AltCorpTarget
 from .providers import esi
 
@@ -88,6 +88,23 @@ def show_sanctions(request):
             "app_name": "altmanager",
             "page_title": "Alt Manager",
             "corporations": data
+        }
+    )
+
+
+@permission_required("altmanager.can_request_alt_corp")
+def alt_check(request, corp_id):
+    _status, data = get_missing(request, corp_id)
+    return render(
+        request,
+        'altmanager/missing.html',
+        context={
+            "version": __version__,
+            "app_name": "altmanager",
+            "page_title": "Alt Manager",
+            "corporation": data['corporation'],
+            "characters": data['characters'],
+            "unknowns": data['unknowns'],
         }
     )
 

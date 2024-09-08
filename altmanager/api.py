@@ -113,6 +113,80 @@ def get_stats_for_corp(request, corp_id: int):
 
 
 @api.get(
+    "/get_missing/{corp_id}",
+    response={200: dict, 500: str, 403: str},
+    tags=["Corps"]
+)
+def get_missing(request, corp_id: int):
+    if not (
+        request.user.has_perm(
+            "altmanager.can_request_alt_corp"
+        )
+    ):
+        logger.warning(
+            f"Access Denied to {request.user} for {corp_id} No Perms")
+        return 403, "Access Denied No Perms"
+
+    if not request.user.is_superuser:
+        if corp_id in AltManagerConfiguration.get_member_corporation_ids():
+            logger.warning(
+                f"Access Denied to {request.user} for {corp_id} Not visible")
+            return 403, "Access Denied Not Visible"
+
+    if corp_id == 0:
+        return 200, {
+            "corporation": " ",
+            # "character":{character_char,
+            "characters": False,
+            "unknowns": -1,
+            "knowns": 0
+        }
+
+    try:
+        token = providers.get_corp_token(
+            corp_id=corp_id,
+            scopes=["esi-corporations.read_corporation_membership.v1"]
+        )
+
+        data = providers.esi.client.Corporation.get_corporations_corporation_id_members(
+            corporation_id=corp_id, token=token.valid_access_token()
+        ).result()
+
+        member_count = len(data)
+
+        _knowns = EveCharacter.objects.filter(character_id__in=data,
+                                              character_ownership__isnull=False
+                                              ).values_list("character_id", flat=True)
+
+        known_ids = list(_knowns)
+
+        out = list(set(data) - set(known_ids))
+
+        new_names = []
+
+        if len(out):
+            new_names = providers.esi.client.Universe.post_universe_names(
+                ids=out
+            ).result()
+
+        _c = EveCorporationInfo.objects.get(corporation_id=corp_id)
+        _c.member_count = member_count
+        _c.save()
+
+        return 200, {
+            "corporation": _c,
+            # "character":{character_char,
+            "characters": new_names,
+            "unknowns": member_count - len(known_ids),
+            "knowns": len(known_ids)
+        }
+
+    except Exception as e:
+        logger.exception(e)
+        return 500, "Error from ESI {e}"
+
+
+@api.get(
     "/get_corps",
     response={200: List[schema.Corporation]},
     tags=["Corps"]

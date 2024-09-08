@@ -125,6 +125,11 @@
                             {% if corp.known_member_count %}
                                 {{ corp.known_member_count }} / {{ corp.member_count }}
                             {% endif %}
+                            {% if corp.known_member_count != corp.member_count %}
+                                <a href="/alts/detail/{{ corp.corporation_id }}">
+                                    <i class="fas fa-info-circle text-danger"></i>
+                                </a>
+                            {% endif %}
                         </td>
                         <td class="align-middle text-center" >
                             {% if corp.revoked %}

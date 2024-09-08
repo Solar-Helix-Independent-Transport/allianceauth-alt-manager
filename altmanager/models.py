@@ -84,16 +84,20 @@ class AltManagerConfiguration(SingletonModel):
         default_permissions = []
 
     @classmethod
-    def get_member_corporation_ids(cls):
-        return set(
-            list(
-                cls.get_solo().member_corps.all(
-                ).values_list(
-                    "corporation_id",
-                    flat=True
-                )
-            )
+    def get_member_corporation_ids(cls, allow_restricted=False):
+        _out = cls.get_solo().member_corps.all(
+        ).values_list(
+            "corporation_id",
+            flat=True
         )
+
+        if not allow_restricted:
+            _out = _out | cls.get_solo().restricted_corps.all(
+            ).values_list(
+                "corporation_id",
+                flat=True
+            )
+        return set(list(_out))
 
 
 class AltCorpTarget(models.Model):

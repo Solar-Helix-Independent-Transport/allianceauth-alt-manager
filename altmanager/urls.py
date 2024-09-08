@@ -19,6 +19,7 @@ urlpatterns = [
     path('request', views.request_main, name='request'),
     path('sanctions', views.show_sanctions, name='sanctions'),
     path('manage', views.show_manage, name='manage'),
+    path('detail/<int:corp_id>', views.alt_check, name='detail'),
     path(
         'revoke_sanction_corp/<int:corp_id>',
         views.sanction_revoke_corp,
