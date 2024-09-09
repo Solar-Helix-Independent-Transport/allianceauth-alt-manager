@@ -34,7 +34,7 @@ class SanctionQuerySet(models.QuerySet):
             queries = []
             if user.has_perm('altmanager.can_sanction_own_corp'):
                 queries.append(
-                    models.Q(record__corporation__corporation_id=char.corporation_id))
+                    models.Q(request__corporation__corporation_id=char.corporation_id))
 
             logger.debug('%s queries for user %s visible chracters.' %
                          (len(queries), user))
