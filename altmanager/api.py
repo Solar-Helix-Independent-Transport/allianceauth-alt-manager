@@ -124,13 +124,13 @@ def get_missing(request, corp_id: int):
         )
     ):
         logger.warning(
-            f"Access Denied to {request.user} for {corp_id} No Perms")
+            f"Access Denied to {request.user} for c:{corp_id} No Perms")
         return 403, "Access Denied No Perms"
 
     if not request.user.is_superuser:
         if corp_id in AltManagerConfiguration.get_member_corporation_ids():
             logger.warning(
-                f"Access Denied to {request.user} for {corp_id} Not visible")
+                f"Access Denied to {request.user} for c:{corp_id} Not visible")
             return 403, "Access Denied Not Visible"
 
     if corp_id == 0:
@@ -184,6 +184,70 @@ def get_missing(request, corp_id: int):
     except Exception as e:
         logger.exception(e)
         return 500, "Error from ESI {e}"
+
+
+@api.get(
+    "/get_missing_alliance/{alliance_id}",
+    response={200: dict, 500: str, 403: str},
+    tags=["Corps"]
+)
+def get_missing_alliance_members(request, alliance_id: int):
+    if not (
+        request.user.has_perm(
+            "altmanager.su_access"
+        )
+    ):
+        logger.warning(
+            f"Access Denied to {request.user} for a:{alliance_id} No Perms")
+        return 403, "Access Denied No Perms"
+
+    output = {
+        "corporations": [],
+        "missing": []
+    }
+
+    corps = providers.esi.client.Alliance.get_alliances_alliance_id_corporations(
+        alliance_id=alliance_id
+    ).result()
+
+    for c in corps:
+        try:
+            _code, corp_data = get_missing(request, corp_id=c)
+            if _code == 200:
+                _m = corp_data["characters"]
+                for ch in _m:
+                    output["missing"].append(
+                        {
+                            "character_id": ch['id'],
+                            "character_name": ch['name'],
+                            "corporation_id": c,
+                            "corporation_name": corp_data["corporation"].corporation_name
+                        }
+                    )
+                del corp_data["characters"]
+                output["corporations"].append({
+                    "corporation": {
+                        "corporation_id": c,
+                        "corporation_name": corp_data["corporation"].corporation_name
+                    },
+                    "unknowns": corp_data["unknowns"],
+                    "knowns": corp_data["knowns"],
+                    "esi_checked": True
+                })
+            else:
+                _c = EveCorporationInfo.objects.get(corporation_id=c)
+                output["corporations"].append({
+                    "corporation": {
+                        "corporation_id": _c.corporation_id,
+                        "corporation_name": _c.corporation_name
+                    },
+                    "unknowns": -1,
+                    "knowns": -1,
+                    "esi_checked": False
+                })
+        except Exception as e:
+            logger.exception(e)
+    return output
 
 
 @api.get(
