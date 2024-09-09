@@ -201,7 +201,7 @@ def claim_corp(request, corp_id=None, req_target_id=None):
     return redirect('altmanager:request')
 
 
-@permission_required(["altmanager.can_sanction_own_corp", "altmanager.can_sanction_all"])
+@permission_required("altmanager.can_sanction_own_corp")
 def sanction_approve_corp(request, corp_id=None):
     vis = AltCorpRecord.objects.visible_to(
         request.user
@@ -239,7 +239,7 @@ def sanction_approve_corp(request, corp_id=None):
     return redirect('altmanager:sanctions')
 
 
-@permission_required(["altmanager.can_sanction_own_corp", "altmanager.can_sanction_all"])
+@permission_required("altmanager.can_sanction_own_corp")
 def sanction_revoke_corp(request, corp_id=None):
     vis = AltCorpRecord.objects.visible_to(
         request.user
@@ -275,7 +275,7 @@ def sanction_revoke_corp(request, corp_id=None):
     return redirect('altmanager:sanctions')
 
 
-@permission_required(["altmanager.can_sanction_all"])
+@permission_required("altmanager.can_sanction_all")
 def sanction_clear_revoke_corp(request, corp_id=None):
     vis = AltCorpRecord.objects.visible_to(
         request.user
@@ -309,7 +309,7 @@ def sanction_clear_revoke_corp(request, corp_id=None):
     return redirect('altmanager:manage')
 
 
-@permission_required(["altmanager.can_sanction_all"])
+@permission_required("altmanager.can_sanction_all")
 def sanction_delete_corp(request, corp_id=None):
     vis = AltCorpRecord.objects.visible_to(
         request.user
@@ -345,7 +345,7 @@ def sanction_delete_corp(request, corp_id=None):
     return redirect('altmanager:manage')
 
 
-@permission_required(["altmanager.can_sanction_all"])
+@permission_required("altmanager.can_sanction_all")
 def approve_corp(request, corp_id=None):
     vis = AltCorpRecord.objects.visible_to(
         request.user
@@ -384,11 +384,7 @@ def approve_corp(request, corp_id=None):
     return redirect('altmanager:manage')
 
 
-@permission_required(
-    [
-        "altmanager.can_sanction_all"
-    ]
-)
+@permission_required("altmanager.can_sanction_all")
 def show_manage(request):
     data = get_sanction_actions(request)
     return render(
