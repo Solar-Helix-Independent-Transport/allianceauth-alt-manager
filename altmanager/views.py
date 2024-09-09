@@ -72,12 +72,7 @@ def request_main(request):
     )
 
 
-@permission_required(
-    [
-        "altmanager.can_sanction_own_corp",
-        "altmanager.can_sanction_all"
-    ]
-)
+@permission_required("altmanager.can_sanction_own_corp")
 def show_sanctions(request):
     data = get_sanction_actions(request)
     return render(
