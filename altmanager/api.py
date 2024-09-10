@@ -413,6 +413,13 @@ def get_sanction_actions(request):
             character_ownership__isnull=False
         ).count()
 
+        known_members_in_member_corps = EveCharacter.objects.filter(
+            corporation_id=_c.corporation_id,
+            character_ownership__user__profile__main_character__corporation_id__in=(
+                AltManagerConfiguration.get_member_corporation_ids()
+            )
+        ).count()
+
         output[_c.corporation_id] = {
             "corporation_name": _c.corporation_name,
             "corporation_id": _c.corporation_id,
@@ -430,6 +437,7 @@ def get_sanction_actions(request):
             "date": _s.request_date,
             "member_count": _c.member_count,
             "known_member_count": known_members,
+            "known_members_in_member_corps": known_members_in_member_corps,
             "target": _s.request.target.name
         }
 

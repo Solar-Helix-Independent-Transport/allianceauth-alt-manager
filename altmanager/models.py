@@ -1,10 +1,11 @@
 import logging
+from collections import defaultdict
 
+from allianceauth.authentication.models import CharacterOwnership
 from allianceauth.eveonline.evelinks import dotlan, evewho, zkillboard
-# from allianceauth.authentication.models import (CharacterOwnership, State,
-#                                                 UserProfile)
 # from allianceauth.eveonline.evelinks import dotlan, eveimageserver, zkillboard
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
+from django.contrib.auth.models import User
 # from allianceauth.notifications import notify
 # from django.contrib.auth.models import User
 from django.db import models
@@ -12,6 +13,10 @@ from django.db import models
 from solo.models import SingletonModel
 
 from .managers import SanctionManager
+
+# from allianceauth.authentication.models import (CharacterOwnership, State,
+#                                                 UserProfile)
+
 
 logger = logging.getLogger(__name__)
 
@@ -84,14 +89,14 @@ class AltManagerConfiguration(SingletonModel):
         default_permissions = []
 
     @classmethod
-    def get_member_corporation_ids(cls, allow_restricted=False):
+    def get_member_corporation_ids(cls, inc_restricted=False):
         _out = cls.get_solo().member_corps.all(
         ).values_list(
             "corporation_id",
             flat=True
         )
 
-        if not allow_restricted:
+        if not inc_restricted:
             _out = _out | cls.get_solo().restricted_corps.all(
             ).values_list(
                 "corporation_id",
@@ -170,7 +175,7 @@ class AltCorpRecord(models.Model):
 
         send_discord_message(user_pk=self.request.owner.character_ownership.user_id, embed=embed)
 
-    def notify_managers(self, message):
+    def notify_managers(self, message, actor: EveCharacter = None):
 
         embed = {
             "title": f"Alt Management Update - {self.request.corporation.corporation_name}",
@@ -191,6 +196,12 @@ class AltCorpRecord(models.Model):
                 )
             },
         }
+        if actor:
+            embed["description"] += (
+                f"\n**Actor: {actor.character_name}**\n"
+                f"[Zkill]({zkillboard.character_url(actor.character_id)})\n"
+                f"[EvE Who]({evewho.character_url(actor.character_id)})\n"
+            )
 
         if not self.revoked:
             if self.approved:
@@ -233,10 +244,17 @@ class AltCorpRecord(models.Model):
         self.sanctioned = False
         self.save()
 
+    def remove_sanction(self, user=None):
+        self.sanctioned = False
+        self.request.sanctioner = None
+        self.save()
+        self.request.save()
+
     def clear_revoke(self):
         self.revoked_reason = None
         self.revoked = False
-        self.sanctioned = True
+        if self.request.sanctioner is not None:
+            self.sanctioned = True
         self.save()
 
     def __str__(self):
@@ -373,3 +391,57 @@ class AltCorpHistory(models.Model):
 
     class Meta:
         default_permissions = []
+
+
+class FilterBase(models.Model):
+
+    name = models.CharField(max_length=500)
+    description = models.CharField(max_length=500)
+
+    class Meta:
+        abstract = True
+
+    def __str__(self):
+        return f"{self.name}: {self.description}"
+
+    def process_filter(self, user: User):
+        raise NotImplementedError("Please Create a filter!")
+
+
+class MainInMemberCorpFilter(FilterBase):
+    swap_logic = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name = "Smart Filter: Main in Member Corp"
+        verbose_name_plural = f"{verbose_name}"
+
+    def process_filter(self, user: User):
+        try:
+            return self.audit_filter([user])[user.id]['check']
+        except Exception as e:
+            logger.error(e, exc_info=1)
+            return False
+
+    def audit_filter(self, users):
+        co = CharacterOwnership.objects.filter(
+            user__in=users,
+            user__profile__main_character__corporation_id__in=(
+                AltManagerConfiguration.get_member_corporation_ids(inc_restricted=True)
+            )
+        ).values_list(
+            "user_id",
+            flat=True
+        ).distinct()
+
+        failure = self.swap_logic
+
+        output = defaultdict(lambda: {"message": 0, "check": False})
+        for u in users:
+            if u.id in co:
+                output[u.id] = {"message": "Main in Member Corp", "check": not failure}
+                continue
+            else:
+                output[u.id] = {"message": "Main not in Member Corp", "check": failure}
+                continue
+
+        return output

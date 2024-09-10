@@ -2,7 +2,7 @@ from django.contrib import admin
 from solo.admin import SingletonModelAdmin
 
 from .models import (AltCorpHistory, AltCorpRecord, AltCorpTarget,
-                     AltManagerConfiguration)
+                     AltManagerConfiguration, MainInMemberCorpFilter)
 
 
 @admin.register(AltManagerConfiguration)
@@ -13,3 +13,4 @@ class ConfigAdmin(SingletonModelAdmin):
 admin.site.register(AltCorpRecord)
 admin.site.register(AltCorpHistory)
 admin.site.register(AltCorpTarget)
+admin.site.register(MainInMemberCorpFilter)

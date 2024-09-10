@@ -26,6 +26,48 @@
 {% endblock header_nav_collapse_left %}
 {% block content %}
     <div class="m-2">
+        <h4 class="strikeOut">How to Guide</h4>
+        <div class="">
+            <div class="d-flex justify-content-around flex-wrap text-center">
+                <div class="m-2 flex-even card" style="min-width: 350px">
+                    <div class="text-center mt-1"><h5>Step 1-3</h5></div>
+                    <div class="">
+                        <h6 class="strikeOut mb-1">Completed by Members</h6>
+                        <p class="mx-1">
+                            Members have added a token and all the characters to Auth and requested Sanctioning.
+                        </p>
+                    </div>
+                </div>
+                <div class="m-2 flex-even card" style="min-width: 350px">
+                    <div class="text-center mt-1"><h5>Step 4</h5></div>
+                    <div class="">
+                        <h6 class="strikeOut mb-1">Completed By Corporation Leadership</h6>
+                        <p class="mx-1">
+                            Corporation Leaders have accepted the request from their member
+                        </p>
+                        <p class="text-warning mx-1">
+                            They understand that they are responsible for the members of the alt corp.
+                        </p>
+                    </div>
+                </div>
+                <div class="m-2 flex-even card" style="min-width: 350px">
+                    <div class="text-center mt-1"><h5>Step 5</h5></div>
+                    <div class="">
+                        <h6 class="strikeOut mb-1">Approvals</h6>
+                        <p class="mx-1">
+                            As Alliance Leaders or Delegates you can manage sanctioned requests below.
+                        </p>
+                        <p class="mx-1 text-info">
+                            Best Practice is to press Approved when they have been actioned.
+                        </p>
+                        <p class="mx-1">
+                            If the member needs to apply to alliance or action anything you will need to contact them directly.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
     <div class="m-2">
         <h4 class="strikeOut text-center" >Visible Sanctions</h4>
         <div class="">
@@ -89,17 +131,21 @@
                             </td>
                             <td class="align-middle text-center {% if corp.member_count == corp.known_member_count %}text-success{% else %}text-danger{% endif %}">
                                 {% if corp.known_member_count %}
-                                    {% if corp.known_member_count != corp.member_count %}
-                                        <a class="btn btn-sm btn-danger" href="/alts/detail/{{ corp.corporation_id }}">
+                                    {% if corp.known_members_in_member_corps != corp.member_count %}
+                                        <a class="btn btn-sm {% if corp.known_member_count > corp.member_count %}btn-danger{% else %}btn-warning{% endif %}" href="/alts/detail/{{ corp.corporation_id }}">
                                             <i class="fas fa-external-link-alt fa-fw me-2"></i>
-                                            {{ corp.known_member_count }} / {{ corp.member_count }}
+                                            {{ corp.known_member_count }}
+                                            {% if corp.known_members_in_member_corps != corp.known_member_count %}<span class="text-danger">({{ corp.known_members_in_member_corps}})</span>{% endif %}
+                                            / {{ corp.member_count }}
                                         </a>
                                     {% else %}
-                                        {{ corp.known_member_count }} / {{ corp.member_count }}
+                                        {{ corp.known_member_count }}
+                                        {% if corp.known_members_in_member_corps != corp.known_member_count %}<span class="text-danger">({{ corp.known_members_in_member_corps}})</span>{% endif %}
+                                        / {{ corp.member_count }}
                                     {% endif %}
                                 {% endif %}
                             </td>
-                            <td class="align-middle text-center" >
+                            <td class="align-middle text-center text-nowrap" >
                                 {% if corp.revoked %}
                                     <span class="badge bg-danger">Revoked</span>
                                     {% if corp.revoked_reason %}
@@ -118,12 +164,16 @@
                             <td class="align-middle text-center" >
                                 {{ corp.target }}
                             </td>
-                            <td class="align-middle text-end">
+                            <td class="align-middle text-end text-nowrap">
                                 {% if corp.revoked %}
                                     <a
                                         class="btn btn-sm bg-danger"
                                         href="/alts/clear_revoke_corp/{{corp.corporation_id}}"
                                     >Clear Revoke</a>
+                                    <a
+                                        class="btn btn-sm bg-danger"
+                                        href="/alts/revoke_sanction_corp/{{corp.corporation_id}}"
+                                    >Delete Sanctioner</a>
 
                                 {% elif corp.approved %}
                                     <a
@@ -137,16 +187,18 @@
                                     >Approve</a>
                                     <a
                                         class="btn btn-sm bg-danger"
-                                        href="/alts/revoke_approval_corp/{{corp.corporation_id}}"
+                                        href="/alts/revoke_sanction_corp/{{corp.corporation_id}}"
                                     >Revoke Approval</a>
                                 {% else %}
-                                    {% if corp.known_member_count != corp.member_count %}
-                                        <span class="text-danger">Unable to Sanction (Add all Members)</span>
-                                    {% else %}
-                                        <a
-                                            class="btn btn-sm bg-success"
-                                            href="/alts/sanction_corp/{{corp.corporation_id}}"
-                                        >Approve</a>
+                                    {% if corp.sanctioner != None %}
+                                        {% if corp.known_members_in_member_corps != corp.member_count %}
+                                            <span class="text-danger">Unable to Sanction (Member Issue)</span>
+                                        {% else %}
+                                            <a
+                                                class="btn btn-sm bg-success"
+                                                href="/alts/sanction_corp/{{corp.corporation_id}}"
+                                            >Approve</a>
+                                        {% endif %}
                                     {% endif %}
                                 {% endif %}
                                 <a

@@ -233,7 +233,8 @@ def sanction_approve_corp(request, corp_id=None):
             _msg
         )
         req.notify_managers(
-            _msg
+            _msg,
+            actor=request.user.profile.main_character
         )
 
     return redirect('altmanager:sanctions')
@@ -255,22 +256,34 @@ def sanction_revoke_corp(request, corp_id=None):
         return redirect('altmanager:sanctions')
     else:
         req = vis.first()
-        req.revoke(request.user)
+        if not req.revoked:
+            req.revoke(request.user)
+            _msg = (
+                f"`{req.request.target.name}` sanctioning revoked for "
+                f"`{req.request.corporation.corporation_name}`"
+            )
+            messages.info(
+                request,
+                _msg
+            )
+            req.notify_owner(
+                _msg
+            )
+            req.notify_managers(
+                _msg,
+                actor=request.user.profile.main_character
+            )
+        else:
+            req.remove_sanction(request.user)
+            _msg = (
+                f"`{req.request.target.name}` sanctioning deleted for "
+                f"`{req.request.corporation.corporation_name}`"
+            )
 
-        _msg = (
-            f"`{req.request.target.name}` sanctioning revoked for "
-            f"`{req.request.corporation.corporation_name}`"
-        )
-        messages.info(
-            request,
-            _msg
-        )
-        req.notify_owner(
-            _msg
-        )
-        req.notify_managers(
-            _msg
-        )
+            req.notify_managers(
+                _msg,
+                actor=request.user.profile.main_character
+            )
 
     return redirect('altmanager:sanctions')
 
@@ -303,7 +316,8 @@ def sanction_clear_revoke_corp(request, corp_id=None):
             _msg
         )
         req.notify_managers(
-            _msg
+            _msg,
+            actor=request.user.profile.main_character
         )
 
     return redirect('altmanager:manage')
@@ -338,7 +352,8 @@ def sanction_delete_corp(request, corp_id=None):
             _msg
         )
         req.notify_managers(
-            _msg
+            _msg,
+            actor=request.user.profile.main_character
         )
         req.delete()
 
@@ -378,7 +393,8 @@ def approve_corp(request, corp_id=None):
             _msg
         )
         req.notify_managers(
-            _msg
+            _msg,
+            actor=request.user.profile.main_character
         )
 
     return redirect('altmanager:manage')
