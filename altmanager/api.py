@@ -1,22 +1,15 @@
 from __future__ import annotations
 
-import json
 import logging
-from datetime import timedelta
 from typing import List
 
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
-from django.conf import settings
 from django.contrib.auth.models import User
 from django.db.models import QuerySet
-from django.utils import timezone
 from esi.decorators import tokens_required
-from esi.errors import TokenExpiredError
 from esi.models import Token
-from ninja import Field, NinjaAPI, Schema
-from ninja.pagination import LimitOffsetPagination, paginate
+from ninja import NinjaAPI
 from ninja.security import django_auth
-from ninja.types import DictStrAny
 
 from . import providers, schema
 from .models import AltCorpRecord, AltManagerConfiguration
