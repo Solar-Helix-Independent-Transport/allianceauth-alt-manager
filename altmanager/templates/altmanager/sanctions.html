@@ -149,7 +149,7 @@
                             <td class="align-middle text-end text-nowrap">
                                 {% if corp.revoked %}
                                     {% if request.user.profile.main_character == corp.sanctioner %}
-                                    {% if corp.sanctioner != None or corp.approver != None %}
+                                        {% if corp.sanctioner != None or corp.approver != None %}
                                             <a
                                             class="btn btn-sm bg-danger"
                                             href="/alts/revoke_sanction_corp/{{corp.corporation_id}}"

@@ -193,17 +193,24 @@
                                 {% else %}
                                     {% if corp.sanctioner != None %}
                                         {% if corp.target.allow_non_members %}
-                                            <a
-                                                class="btn btn-sm btn-warning"
-                                                href="/alts/sanction_corp/{{corp.corporation_id}}"
-                                            >Approve - With Non-Members</a>
+                                            {% if corp.known_members_in_member_corps != corp.member_count %}
+                                                <a
+                                                    class="btn btn-sm btn-warning"
+                                                    href="/alts/approve_corp/{{corp.corporation_id}}"
+                                                >Approve - With Non-Members</a>
+                                            {% else %}
+                                                <a
+                                                class="btn btn-sm btn-success"
+                                                href="/alts/approve_corp/{{corp.corporation_id}}"
+                                                >Approve</a>
+                                            {% endif %}
                                         {% else %}
                                             {% if corp.known_members_in_member_corps != corp.member_count %}
                                                 <span class="text-danger">Unable to Approve (Membership Issue)</span>
                                             {% else %}
                                                 <a
                                                     class="btn btn-sm btn-success"
-                                                    href="/alts/sanction_corp/{{corp.corporation_id}}"
+                                                    href="/alts/approve_corp/{{corp.corporation_id}}"
                                                 >Approve</a>
                                             {% endif %}
                                         {% endif %}
