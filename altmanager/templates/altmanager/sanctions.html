@@ -144,32 +144,40 @@
                                 {% endif %}
                             </td>
                             <td class="align-middle text-center" >
-                                {{ corp.target }}
+                                {{ corp.target.name }}
                             </td>
                             <td class="align-middle text-end text-nowrap">
                                 {% if corp.revoked %}
                                     {% if request.user.profile.main_character == corp.sanctioner %}
-                                        <a
+                                    {% if corp.sanctioner != None or corp.approver != None %}
+                                            <a
                                             class="btn btn-sm bg-danger"
                                             href="/alts/revoke_sanction_corp/{{corp.corporation_id}}"
-                                        >Delete Sanctioner</a>
+                                            >Delete Approvals</a>
+                                        {% endif %}
                                     {% else %}
                                         <span class="text-warning">Contact Leadership to Action Revoke!</span>
                                     {% endif %}
-
                                 {% elif corp.sanctioned %}
                                     <a
                                         class="btn btn-sm bg-danger"
                                         href="/alts/revoke_sanction_corp/{{corp.corporation_id}}"
                                     >Revoke</a>
                                 {% else %}
-                                    {% if corp.known_members_in_member_corps != corp.member_count %}
-                                        <span class="text-danger">Unable to Sanction (Member Issue)</span>
-                                    {% else %}
+                                    {% if corp.target.allow_non_members %}
                                         <a
-                                            class="btn btn-sm bg-success"
+                                            class="btn btn-sm btn-warning"
                                             href="/alts/sanction_corp/{{corp.corporation_id}}"
-                                        >Approve</a>
+                                        >Sanction - With Non-Members</a>
+                                    {% else %}
+                                        {% if corp.known_members_in_member_corps != corp.member_count %}
+                                            <span class="text-danger">Unable to Sanction (Membership Issue)</span>
+                                        {% else %}
+                                            <a
+                                                class="btn btn-sm btn-success"
+                                                href="/alts/sanction_corp/{{corp.corporation_id}}"
+                                            >Sanction</a>
+                                        {% endif %}
                                     {% endif %}
                                 {% endif %}
                             </td>

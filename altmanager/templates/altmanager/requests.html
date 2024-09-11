@@ -123,13 +123,17 @@
                         </td>
                         <td class="align-middle text-center {% if corp.member_count == corp.known_member_count %}text-success{% else %}text-danger{% endif %}">
                             {% if corp.known_member_count %}
-                                {% if corp.known_member_count != corp.member_count %}
-                                    <a class="btn btn-sm btn-danger" href="/alts/detail/{{ corp.corporation_id }}">
+                                {% if corp.known_members_in_member_corps != corp.member_count %}
+                                    <a class="btn btn-sm {% if corp.known_member_count > corp.member_count %}btn-danger{% else %}btn-warning{% endif %}" href="/alts/detail/{{ corp.corporation_id }}">
                                         <i class="fas fa-external-link-alt fa-fw me-2"></i>
-                                        {{ corp.known_member_count }} / {{ corp.member_count }}
+                                        {{ corp.known_member_count }}
+                                        {% if corp.known_members_in_member_corps != corp.known_member_count %}<span class="text-danger">({{ corp.known_members_in_member_corps}})</span>{% endif %}
+                                        / {{ corp.member_count }}
                                     </a>
                                 {% else %}
-                                    {{ corp.known_member_count }} / {{ corp.member_count }}
+                                    {{ corp.known_member_count }}
+                                    {% if corp.known_members_in_member_corps != corp.known_member_count %}<span class="text-danger">({{ corp.known_members_in_member_corps}})</span>{% endif %}
+                                    / {{ corp.member_count }}
                                 {% endif %}
                             {% endif %}
                         </td>
@@ -159,9 +163,6 @@
                             {% else %}
                                 {% if corp.known_member_count != corp.member_count %}
                                     <span class="text-danger">Unable to Claim (Add all Members)</span>
-                                    <a class="btn btn-sm btn-danger" href="/alts/detail/{{ corp.corporation_id }}">
-                                        <i class="fas fa-external-link-alt fa-fw"></i>
-                                    </a>
                                 {% else %}
                                     <a
                                     class="btn btn-sm bg-secondary"

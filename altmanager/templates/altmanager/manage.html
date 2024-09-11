@@ -162,7 +162,7 @@
                                 {% endif %}
                             </td>
                             <td class="align-middle text-center" >
-                                {{ corp.target }}
+                                {{ corp.target.name }}
                             </td>
                             <td class="align-middle text-end text-nowrap">
                                 {% if corp.revoked %}
@@ -170,11 +170,12 @@
                                         class="btn btn-sm bg-danger"
                                         href="/alts/clear_revoke_corp/{{corp.corporation_id}}"
                                     >Clear Revoke</a>
-                                    <a
-                                        class="btn btn-sm bg-danger"
-                                        href="/alts/revoke_sanction_corp/{{corp.corporation_id}}"
-                                    >Delete Sanctioner</a>
-
+                                    {% if corp.sanctioner or corp.approver %}
+                                        <a
+                                            class="btn btn-sm bg-danger"
+                                            href="/alts/revoke_sanction_corp/{{corp.corporation_id}}"
+                                        >Delete Approvals</a>
+                                    {% endif %}
                                 {% elif corp.approved %}
                                     <a
                                         class="btn btn-sm bg-danger"
@@ -191,13 +192,20 @@
                                     >Revoke Approval</a>
                                 {% else %}
                                     {% if corp.sanctioner != None %}
-                                        {% if corp.known_members_in_member_corps != corp.member_count %}
-                                            <span class="text-danger">Unable to Sanction (Member Issue)</span>
-                                        {% else %}
+                                        {% if corp.target.allow_non_members %}
                                             <a
-                                                class="btn btn-sm bg-success"
+                                                class="btn btn-sm btn-warning"
                                                 href="/alts/sanction_corp/{{corp.corporation_id}}"
-                                            >Approve</a>
+                                            >Approve - With Non-Members</a>
+                                        {% else %}
+                                            {% if corp.known_members_in_member_corps != corp.member_count %}
+                                                <span class="text-danger">Unable to Approve (Membership Issue)</span>
+                                            {% else %}
+                                                <a
+                                                    class="btn btn-sm btn-success"
+                                                    href="/alts/sanction_corp/{{corp.corporation_id}}"
+                                                >Approve</a>
+                                            {% endif %}
                                         {% endif %}
                                     {% endif %}
                                 {% endif %}

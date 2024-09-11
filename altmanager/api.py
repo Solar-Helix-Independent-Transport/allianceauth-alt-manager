@@ -117,7 +117,7 @@ def get_stats_for_corp(request, corp_id: int):
     response={200: dict, 500: str, 403: str},
     tags=["Corps"]
 )
-def get_missing(request, corp_id: int):
+def get_missing(request, corp_id: int, check_members: bool = False):
     if not (
         request.user.has_perm(
             "altmanager.can_request_alt_corp"
@@ -173,10 +173,44 @@ def get_missing(request, corp_id: int):
         _c.member_count = member_count
         _c.save()
 
+        known_members_in_member_corps = EveCharacter.objects.filter(
+            corporation_id=corp_id,
+            character_ownership__isnull=False
+        ).exclude(
+            character_ownership__user__profile__main_character__corporation_id__in=(
+                AltManagerConfiguration.get_member_corporation_ids()
+            )
+        ).values_list(
+            "character_name",
+            "character_id",
+            "character_ownership__user__profile__main_character__character_name",
+            "character_ownership__user__profile__main_character__character_id",
+            "character_ownership__user__profile__main_character__corporation_name",
+            "character_ownership__user__profile__main_character__corporation_id",
+            "character_ownership__user__profile__main_character__alliance_name",
+            "character_ownership__user__profile__main_character__alliance_id",
+        )
+        _know_unknowns = []
+        if check_members:
+            for _ch in known_members_in_member_corps:
+                _know_unknowns.append(
+                    {
+                        "id": _ch[1],
+                        "name": _ch[0],
+                        "main_id": _ch[3],
+                        "main_name": _ch[2],
+                        "corp_id": _ch[5],
+                        "corp_name": _ch[4],
+                        "alliance_id": _ch[7],
+                        "alliance_name": _ch[6],
+                    }
+                )
+
         return 200, {
             "corporation": _c,
             # "character":{character_char,
             "characters": new_names,
+            "known_non_members": _know_unknowns,
             "unknowns": member_count - len(known_ids),
             "knowns": len(known_ids)
         }
@@ -331,6 +365,13 @@ def get_sanctionable_corps(request, *args):
             character_ownership__isnull=False
         ).count()
 
+        known_members_in_member_corps = EveCharacter.objects.filter(
+            corporation_id=_c.corporation_id,
+            character_ownership__user__profile__main_character__corporation_id__in=(
+                AltManagerConfiguration.get_member_corporation_ids()
+            )
+        ).count()
+
         output[_c.corporation_id] = {
             "corporation_name": _c.corporation_name,
             "corporation_id": _c.corporation_id,
@@ -347,7 +388,8 @@ def get_sanctionable_corps(request, *args):
             "revoked_reason": _s.revoked_reason,
             "date": _s.request_date,
             "member_count": _c.member_count,
-            "known_member_count": known_members
+            "known_member_count": known_members,
+            "known_members_in_member_corps": known_members_in_member_corps,
         }
 
     logger.warning(f"req  {output}")
@@ -366,6 +408,14 @@ def get_sanctionable_corps(request, *args):
                         corporation_id=_c.corporation_id,
                         character_ownership__isnull=False
                     ).count()
+
+                    known_members_in_member_corps = EveCharacter.objects.filter(
+                        corporation_id=_c.corporation_id,
+                        character_ownership__user__profile__main_character__corporation_id__in=(
+                            AltManagerConfiguration.get_member_corporation_ids()
+                        )
+                    ).count()
+
                     output[_c.corporation_id] = {
                         "corporation_name": _c.corporation_name,
                         "corporation_id": _c.corporation_id,
@@ -376,10 +426,9 @@ def get_sanctionable_corps(request, *args):
                             _a.alliance_id if _a else None
                         ),
                         "member_count": _c.member_count,
-                        "known_member_count": known_members
+                        "known_member_count": known_members,
+                        "known_members_in_member_corps": known_members_in_member_corps,
                     }
-
-    logger.warning(f"out  {output}")
 
     return list(output.values())
 
@@ -438,7 +487,7 @@ def get_sanction_actions(request):
             "member_count": _c.member_count,
             "known_member_count": known_members,
             "known_members_in_member_corps": known_members_in_member_corps,
-            "target": _s.request.target.name
+            "target": _s.request.target
         }
 
     return list(output.values())

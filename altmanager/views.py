@@ -9,7 +9,8 @@ from esi.models import Token
 
 from . import __version__
 from .api import get_missing, get_sanction_actions, get_sanctionable_corps
-from .models import AltCorpHistory, AltCorpRecord, AltCorpTarget
+from .models import (AltCorpHistory, AltCorpRecord, AltCorpTarget,
+                     AltManagerConfiguration)
 from .providers import esi
 
 REQUIRED_SCOPES = ["esi-corporations.read_corporation_membership.v1"]
@@ -89,7 +90,7 @@ def show_sanctions(request):
 
 @permission_required("altmanager.can_request_alt_corp")
 def alt_check(request, corp_id):
-    _status, data = get_missing(request, corp_id)
+    _status, data = get_missing(request, corp_id, check_members=True)
     if _status != 200:
         messages.warning(
             request,
@@ -105,6 +106,7 @@ def alt_check(request, corp_id):
             "page_title": "Alt Manager",
             "corporation": data['corporation'],
             "characters": data['characters'],
+            "known_non_members": data['known_non_members'],
             "unknowns": data['unknowns'],
         }
     )
@@ -180,6 +182,19 @@ def claim_corp(request, corp_id=None, req_target_id=None):
             return redirect('altmanager:request')
         else:
             targets = AltCorpTarget.objects.all()
+
+            known_members = EveCharacter.objects.filter(
+                corporation_id=corp_id,
+                character_ownership__isnull=False
+            ).count()
+
+            known_members_in_member_corps = EveCharacter.objects.filter(
+                corporation_id=corp_id,
+                character_ownership__user__profile__main_character__corporation_id__in=(
+                    AltManagerConfiguration.get_member_corporation_ids()
+                )
+            ).count()
+
             return render(
                 request,
                 'altmanager/targets.html',
@@ -187,16 +202,19 @@ def claim_corp(request, corp_id=None, req_target_id=None):
                     "version": __version__,
                     "app_name": "altmanager",
                     "page_title": "Alt Manager",
-                    'member_count': len(members),
-                    'corporation_ticker': char.corporation_ticker,
                     'corporation_name': char.corporation_name,
                     'corporation_id': char.corporation_id,
-                    "targets": targets
+                    "targets": targets,
+                    'corporation_ticker': char.corporation_ticker,
+                    "known_members": known_members,
+                    "known_members_in_member_corps": known_members_in_member_corps
                 }
             )
 
     else:
-        messages.error(request, "No Tokens found. Please add a membership token.")
+        messages.error(
+            request, "No Tokens found. Please add a membership token."
+        )
 
     return redirect('altmanager:request')
 
@@ -385,15 +403,24 @@ def approve_corp(request, corp_id=None):
             f"`{req.request.corporation.corporation_name}`"
         )
 
+        _msg_owner = _msg
+        _msg_manager = _msg
+
+        if req.request.target.last_step_text:
+            _msg_owner = f"{_msg}\n\n{req.request.target.last_step_text}"
+            _msg_manager = f"{_msg}\n\n**Message to owner:**\n{req.request.target.last_step_text}"
+
         messages.info(
             request,
             _msg
         )
+
         req.notify_owner(
-            _msg
+            _msg_owner
         )
+
         req.notify_managers(
-            _msg,
+            _msg_manager,
             actor=request.user.profile.main_character
         )
 

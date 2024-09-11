@@ -13,4 +13,5 @@ class ConfigAdmin(SingletonModelAdmin):
 admin.site.register(AltCorpRecord)
 admin.site.register(AltCorpHistory)
 admin.site.register(AltCorpTarget)
+
 admin.site.register(MainInMemberCorpFilter)

@@ -44,7 +44,21 @@
                     </p>
                 </div>
                 <div class="card-footer">
-                    <a class="btn bg-primary w-100" href="/alts/apply_corp/{{corporation_id}}/{{req.id}}">Request</a>
+                    {% if req.allow_non_members %}
+                        <a class="btn bg-primary w-100" href="/alts/apply_corp/{{corporation_id}}/{{req.id}}">Request</a>
+                    {% else %}
+                        {% if known_members_in_member_corps != member_count %}
+                            <span class="text-danger text-center">
+                                Non Member Linked Characters Found
+                                <br/>
+                                <figcaption class="figure-caption text-danger text-center">
+                                    All characters must be linked to a Member Corporation Main
+                                </figcaption>
+                            </span>
+                        {% else %}
+                            <a class="btn bg-primary w-100" href="/alts/apply_corp/{{corporation_id}}/{{req.id}}">Request</a>
+                        {% endif %}
+                    {% endif %}
                 </div>
             </div>
             {% endfor %}

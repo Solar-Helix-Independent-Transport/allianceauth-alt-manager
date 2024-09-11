@@ -108,6 +108,13 @@ class AltManagerConfiguration(SingletonModel):
 class AltCorpTarget(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField(default=None, null=True, blank=True)
+    allow_non_members = models.BooleanField(default=False)
+    last_step_text = models.TextField(
+        default="None",
+        null=True,
+        blank=True,
+        help_text="Discord Embed formatted text to send to member on approval"
+    )
 
     def __str__(self):
         return f"Target: {self.name}"
@@ -238,15 +245,16 @@ class AltCorpRecord(models.Model):
         usr = "Admin"
         if user:
             usr = user.profile.main_character.character_name
-
         self.revoked_reason = f"Revoked by {usr} {message}"
         self.revoked = True
         self.sanctioned = False
+        self.approved = False
         self.save()
 
     def remove_sanction(self, user=None):
         self.sanctioned = False
         self.request.sanctioner = None
+        self.request.approver = None
         self.save()
         self.request.save()
 
@@ -255,6 +263,8 @@ class AltCorpRecord(models.Model):
         self.revoked = False
         if self.request.sanctioner is not None:
             self.sanctioned = True
+        if self.request.approver is not None:
+            self.approved = True
         self.save()
 
     def __str__(self):

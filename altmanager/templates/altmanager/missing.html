@@ -40,19 +40,43 @@
             <thead>
                 <tr>
                     <th>Name</th>
+                    <th>Main Character</th>
                     <th class="text-end">Links</th>
                 </tr>
             </thead>
             <tbody>
-            {% for char in characters %}
+                {% for char in characters %}
                 <tr>
                     <td class="align-middle text-start">
                         <img src="https://images.evetech.net/characters/{{ char.id }}/portrait" width="64px" height="64px"/>
                         {{ char.name }}
                     </td>
+                    <td class="align-middle text-start">
+                        Un-Linked
+                    </td>
+
                     <td class="align-middle text-end">
                         <a class="btn btn-sm btn-primary" href="https://zkillboard.com/character/{{ char.id }}">zKill</a>
                         <a class="btn btn-sm btn-primary" href="https://evewho.com/character/{{ char.id }}">EvE Who</a>
+                    </td>
+                </tr>
+            {% endfor %}
+            {% for char in known_non_members %}
+                <tr>
+                    <td class="align-middle text-start">
+                        <img src="https://images.evetech.net/characters/{{ char.id }}/portrait" width="64px" height="64px"/>
+                        {{ char.name }}
+                    </td>
+                    <td class="align-middle text-start">
+                        <img src="https://images.evetech.net/characters/{{ char.main_id }}/portrait" width="64px" height="64px"/>
+                        {{ char.main_name }}
+                        <span class="small text-muted">{{ char.corp_name }} {% if char.alliance_name %}({{char.alliance_name}}){% endif %}</span>
+                    </td>
+                    <td class="align-middle text-end">
+                        <a class="btn btn-sm btn-primary" href="https://zkillboard.com/character/{{ char.id }}">zKill</a>
+                        <a class="btn btn-sm btn-primary" href="https://evewho.com/character/{{ char.id }}">EvE Who</a>
+                        <a class="btn btn-sm btn-primary" href="https://zkillboard.com/character/{{ char.id }}">zKill Main</a>
+                        <a class="btn btn-sm btn-primary" href="https://evewho.com/character/{{ char.id }}">EvE Who Main</a>
                     </td>
                 </tr>
             {% endfor %}
