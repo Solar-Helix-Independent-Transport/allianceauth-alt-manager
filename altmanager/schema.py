@@ -1,6 +1,5 @@
 from datetime import datetime
-from typing import Dict, List, Optional
-from xmlrpc.client import Boolean, boolean
+from typing import Optional
 
 from ninja import Schema
 
@@ -16,6 +15,12 @@ class Character(Schema):
     corporation_name: str
     alliance_id: Optional[int] = None
     alliance_name: Optional[str] = None
+    main_character_name: Optional[str] = ""
+    main_character_id: Optional[int] = None
+    main_corporation_id: Optional[int] = None
+    main_corporation_name: Optional[str] = ""
+    main_alliance_id: Optional[int] = None
+    main_alliance_name: Optional[str] = None
 
 
 class Corporation(Schema):
@@ -25,6 +30,11 @@ class Corporation(Schema):
     alliance_name: Optional[str] = None
     member_count: Optional[int] = None
     known_member_count: Optional[int] = None
+
+
+class Alliance(Schema):
+    alliance_id: Optional[int] = None
+    alliance_name: Optional[str] = None
 
 
 class Sanction(Corporation):

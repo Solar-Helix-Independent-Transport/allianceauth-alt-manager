@@ -4,7 +4,8 @@ from collections import defaultdict
 from allianceauth.authentication.models import CharacterOwnership
 from allianceauth.eveonline.evelinks import dotlan, evewho, zkillboard
 # from allianceauth.eveonline.evelinks import dotlan, eveimageserver, zkillboard
-from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
+from allianceauth.eveonline.models import (EveAllianceInfo, EveCharacter,
+                                           EveCorporationInfo)
 from django.contrib.auth.models import User
 # from allianceauth.notifications import notify
 # from django.contrib.auth.models import User

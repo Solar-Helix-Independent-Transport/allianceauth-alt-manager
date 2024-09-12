@@ -3,7 +3,8 @@ from __future__ import annotations
 import logging
 from typing import List
 
-from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
+from allianceauth.eveonline.models import (EveAllianceInfo, EveCharacter,
+                                           EveCorporationInfo)
 from django.contrib.auth.models import User
 from django.db.models import QuerySet
 from esi.decorators import tokens_required
@@ -12,6 +13,7 @@ from ninja import NinjaAPI
 from ninja.security import django_auth
 
 from . import providers, schema
+from .helpers import get_all_sanctionable_alliances
 from .models import AltCorpRecord, AltManagerConfiguration
 
 REQUIRED_SCOPES = ["esi-corporations.read_corporation_membership.v1"]
@@ -245,10 +247,27 @@ def get_missing_alliance_members(request, alliance_id: int):
                 for ch in _m:
                     output["missing"].append(
                         {
-                            "character_id": ch['id'],
-                            "character_name": ch['name'],
-                            "corporation_id": c,
-                            "corporation_name": corp_data["corporation"].corporation_name
+                            "id": ch['id'],
+                            "name": ch['name'],
+                            "corp_id": c,
+                            "corp_name": corp_data["corporation"].corporation_name
+                        }
+                    )
+                _m = corp_data["known_non_members"]
+                for ch in _m:
+                    output["known_non_members"].append(
+                        {
+                            "id": ch['id'],
+                            "name": ch['name'],
+                            "corp_id": c,
+                            "corp_name": corp_data["corporation"].corporation_name,
+                            "main_id": ch['main_id'],
+                            "main_name": ch['main_name'],
+                            "main_corp_id": ch['corp_id'],
+                            "main_corp_name": ch['corp_name'],
+                            "main_alliance_id": ch['alliance_id'],
+                            "main_alliance_name": ch['alliance_name'],
+
                         }
                     )
                 del corp_data["characters"]
@@ -424,6 +443,134 @@ def get_sanctionable_corps(request, *args):
                     }
 
     return list(output.values())
+
+
+@api.get(
+    "/get_sanctionable_alliances",
+    response={200: List[schema.Alliance]},
+    tags=["alliances"]
+)
+def get_sanctionable_alliances(request):
+    # output = {}
+
+    members = AltManagerConfiguration.get_member_corporation_ids()
+
+    _corps = request.user.character_ownerships.all(
+    ).exclude(
+        character__corporation_id__in=members
+    )
+
+    _alliances = EveAllianceInfo.objects.filter(
+        alliance_id__in=_corps.values_list(
+            "character__alliance_id",
+            flat=True
+        )
+    )
+
+    return _alliances
+
+
+@api.get(
+    "/get_all_sanctionable_alliances",
+    response={200: List[schema.Alliance]},
+    tags=["alliances"]
+)
+def get_avail_sanctionable_alliances(request):
+    return get_all_sanctionable_alliances()
+
+    # mc_id = request.user.profile.main_character.character_id
+
+    # if mc_id not in _chars:
+    #     _chars.append(mc_id)
+
+    # characters = EveCharacter.objects.filter(
+    #     character_id__in=_chars
+    # )
+
+    # logger.warning(f"char {characters}")
+
+    # sanctions = AltCorpRecord.objects.filter(
+    #     request__owner__in=characters
+    # )
+
+    # logger.warning(f"alts {sanctions}")
+
+    # for _s in sanctions:
+    #     _c = _s.request.corporation
+
+    #     logger.warning(sanctions)
+
+    #     known_members = EveCharacter.objects.filter(
+    #         corporation_id=_c.corporation_id,
+    #         character_ownership__isnull=False
+    #     ).count()
+
+    #     known_members_in_member_corps = EveCharacter.objects.filter(
+    #         corporation_id=_c.corporation_id,
+    #         character_ownership__user__profile__main_character__corporation_id__in=(
+    #             AltManagerConfiguration.get_member_corporation_ids()
+    #         )
+    #     ).count()
+
+    #     output[_c.corporation_id] = {
+    #         "corporation_name": _c.corporation_name,
+    #         "corporation_id": _c.corporation_id,
+    #         "alliance_name": (
+    #             _c.alliance.alliance_name if _c.alliance else None
+    #         ),
+    #         "alliance_id": _c.alliance.alliance_id if _c.alliance else None,
+    #         "owner": _s.request.owner,
+    #         "approver": _s.request.approver,
+    #         "sanctioner": _s.request.sanctioner,
+    #         "approved": _s.approved,
+    #         "sanctioned": _s.sanctioned,
+    #         "revoked": _s.revoked,
+    #         "revoked_reason": _s.revoked_reason,
+    #         "date": _s.request_date,
+    #         "member_count": _c.member_count,
+    #         "known_member_count": known_members,
+    #         "known_members_in_member_corps": known_members_in_member_corps,
+    #     }
+
+    # logger.warning(f"req  {output}")
+
+    # corporations = EveCorporationInfo.objects.filter(
+    #     corporation_id__in=characters.values_list("corporation_id")
+    # )
+
+    # for _c in corporations:
+    #     if _c.corporation_id > 2000000:
+    #         if _c.corporation_id not in members:
+    #             if _c.corporation_id not in output:
+    #                 logger.warning(_c)
+    #                 _a = _c.alliance
+    #                 known_members = EveCharacter.objects.filter(
+    #                     corporation_id=_c.corporation_id,
+    #                     character_ownership__isnull=False
+    #                 ).count()
+
+    #                 known_members_in_member_corps = EveCharacter.objects.filter(
+    #                     corporation_id=_c.corporation_id,
+    #                     character_ownership__user__profile__main_character__corporation_id__in=(
+    #                         AltManagerConfiguration.get_member_corporation_ids()
+    #                     )
+    #                 ).count()
+
+    #                 output[_c.corporation_id] = {
+    #                     "corporation_name": _c.corporation_name,
+    #                     "corporation_id": _c.corporation_id,
+    #                     "alliance_name": (
+    #                         _a.alliance_name if _a else None
+    #                     ),
+    #                     "alliance_id": (
+    #                         _a.alliance_id if _a else None
+    #                     ),
+    #                     "member_count": _c.member_count,
+    #                     "known_member_count": known_members,
+    #                     "known_members_in_member_corps": known_members_in_member_corps,
+    #                 }
+
+    # return list(output.values())
 
 
 @api.get(
