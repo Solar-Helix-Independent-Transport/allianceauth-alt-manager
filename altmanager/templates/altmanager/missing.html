@@ -6,23 +6,7 @@
 {% block page_title %}{{page_title}}{% endblock %}
 {% block header_nav_brand %}{{page_title}}{% endblock %}
 {% block header_nav_collapse_left %}
-{% if perms.altmanager.can_request_alt_corp %}
-    <li class="nav-item">
-        <a class="nav-link {% navactive request 'altmanager:request' %}" href="{% url 'altmanager:request' %}">{% translate "Request" %}</a>
-    </li>
-{% endif %}
-
-{% if perms.altmanager.can_sanction_own_corp %}
-    <li class="nav-item">
-        <a class="nav-link {% navactive request 'altmanager:sanctions' %}" href="{% url 'altmanager:sanctions' %}">{% translate "Sanctions" %}</a>
-    </li>
-{% endif %}
-
-{% if perms.altmanager.can_manage_alt_corp %}
-    <li class="nav-item">
-        <a class="nav-link {% navactive request 'altmanager:manage' %}" href="{% url 'altmanager:manage' %}">{% translate "Manage" %}</a>
-    </li>
-{% endif %}
+    {% include "altmanager/menu.html" %}
 {% endblock header_nav_collapse_left %}
 {% block content %}
     <div class="m-2">
@@ -68,15 +52,24 @@
                         {{ char.name }}
                     </td>
                     <td class="align-middle text-start">
+                        {% if char.main_name %}
                         <img src="https://images.evetech.net/characters/{{ char.main_id }}/portrait" width="64px" height="64px"/>
-                        {{ char.main_name }}
-                        <span class="small text-muted">{{ char.corp_name }} {% if char.alliance_name %}({{char.alliance_name}}){% endif %}</span>
+                            {{ char.main_name }}
+                            <span class="small text-muted">{{ char.corp_name }} {% if char.alliance_name %}({{char.alliance_name}}){% endif %}</span>
+                        {% else %}
+                            {{ char.username }}
+                        {% endif %}
                     </td>
+
                     <td class="align-middle text-end">
-                        <a class="btn btn-sm btn-primary" href="https://zkillboard.com/character/{{ char.id }}">zKill</a>
-                        <a class="btn btn-sm btn-primary" href="https://evewho.com/character/{{ char.id }}">EvE Who</a>
-                        <a class="btn btn-sm btn-primary" href="https://zkillboard.com/character/{{ char.id }}">zKill Main</a>
-                        <a class="btn btn-sm btn-primary" href="https://evewho.com/character/{{ char.id }}">EvE Who Main</a>
+                        {% if char.main_name %}
+                            <a class="btn btn-sm btn-primary" href="https://zkillboard.com/character/{{ char.id }}">zKill</a>
+                            <a class="btn btn-sm btn-primary" href="https://evewho.com/character/{{ char.id }}">EvE Who</a>
+                            <a class="btn btn-sm btn-primary" href="https://zkillboard.com/character/{{ char.id }}">zKill Main</a>
+                            <a class="btn btn-sm btn-primary" href="https://evewho.com/character/{{ char.id }}">EvE Who Main</a>
+                        {% else %}
+                            <span class="text-danger">User has no main character</span>
+                        {% endif %}
                     </td>
                 </tr>
             {% endfor %}

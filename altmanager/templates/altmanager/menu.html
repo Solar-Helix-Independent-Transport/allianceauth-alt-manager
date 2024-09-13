@@ -1,0 +1,20 @@
+{% load navactive %}
+{% load i18n %}
+
+{% if perms.altmanager.can_request_alt_corp %}
+    <li class="nav-item">
+        <a class="nav-link {% navactive request 'altmanager:request' %}" href="{% url 'altmanager:request' %}">{% translate "Request" %}</a>
+    </li>
+{% endif %}
+
+{% if perms.altmanager.can_sanction_own_corp %}
+    <li class="nav-item">
+        <a class="nav-link {% navactive request 'altmanager:sanctions' %}" href="{% url 'altmanager:sanctions' %}">{% translate "Sanctions" %}</a>
+    </li>
+{% endif %}
+
+{% if perms.altmanager.can_manage_alt_corp %}
+    <li class="nav-item">
+        <a class="nav-link {% navactive request 'altmanager:manage' %}" href="{% url 'altmanager:manage' %}">{% translate "Manage" %}</a>
+    </li>
+{% endif %}

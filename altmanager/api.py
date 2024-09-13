@@ -13,16 +13,23 @@ from ninja import NinjaAPI
 from ninja.security import django_auth
 
 from . import providers, schema
-from .helpers import get_all_sanctionable_alliances
+from .helpers import (get_all_sanctionable_alliances,
+                      get_known_corporation_members,
+                      get_known_corporation_members_from_members,
+                      get_user_sanctionable_alliances)
 from .models import AltCorpRecord, AltManagerConfiguration
 
 REQUIRED_SCOPES = ["esi-corporations.read_corporation_membership.v1"]
 
 logger = logging.getLogger(__name__)
 
-
-api = NinjaAPI(title="Alt Manager API", version="0.0.1",
-               urls_namespace='altmanager:api', auth=django_auth, csrf=True)  # ,
+api = NinjaAPI(
+    title="Alt Manager API",
+    version="0.0.2",
+    urls_namespace='altmanager:api',
+    auth=django_auth,
+    csrf=True
+)
 # openapi_url=settings.DEBUG and "/openapi.json" or "")
 
 
@@ -122,11 +129,16 @@ def get_missing(request, corp_id: int, check_members: bool = False):
             f"Access Denied to {request.user} for c:{corp_id} No Perms")
         return 403, "Access Denied No Perms"
 
-    if not request.user.is_superuser:
-        if corp_id in AltManagerConfiguration.get_member_corporation_ids():
-            logger.warning(
-                f"Access Denied to {request.user} for c:{corp_id} Not visible")
-            return 403, "Access Denied Not Visible"
+    # if not request.user.is_superuser:
+    mbr = corp_id not in AltManagerConfiguration.get_member_corporation_ids()
+    usr = corp_id in get_corps_for_user(request.user)
+    vis_to = AltCorpRecord.objects.visible_to(
+        request.user
+    ).filter(request__corporation__corporation_id=corp_id).exists()
+    if not (mbr and (usr or vis_to)):
+        logger.warning(
+            f"Access Denied to {request.user} for c:{corp_id} Not visible")
+        return 403, "Access Denied Not Visible"
 
     if corp_id == 0:
         return 200, {
@@ -168,9 +180,8 @@ def get_missing(request, corp_id: int, check_members: bool = False):
         _c.member_count = member_count
         _c.save()
 
-        known_members_in_member_corps = EveCharacter.objects.filter(
-            corporation_id=corp_id,
-            character_ownership__isnull=False
+        known_members_in_member_corps = get_known_corporation_members(
+            corp_id
         ).exclude(
             character_ownership__user__profile__main_character__corporation_id__in=(
                 AltManagerConfiguration.get_member_corporation_ids()
@@ -184,6 +195,7 @@ def get_missing(request, corp_id: int, check_members: bool = False):
             "character_ownership__user__profile__main_character__corporation_id",
             "character_ownership__user__profile__main_character__alliance_name",
             "character_ownership__user__profile__main_character__alliance_id",
+            "character_ownership__user__username"
         )
         _know_unknowns = []
         if check_members:
@@ -198,6 +210,7 @@ def get_missing(request, corp_id: int, check_members: bool = False):
                         "corp_name": _ch[4],
                         "alliance_id": _ch[7],
                         "alliance_name": _ch[6],
+                        "username": _ch[8]
                     }
                 )
 
@@ -372,16 +385,12 @@ def get_sanctionable_corps(request, *args):
 
         logger.warning(sanctions)
 
-        known_members = EveCharacter.objects.filter(
-            corporation_id=_c.corporation_id,
-            character_ownership__isnull=False
+        known_members = get_known_corporation_members(
+            _c.corporation_id
         ).count()
 
-        known_members_in_member_corps = EveCharacter.objects.filter(
-            corporation_id=_c.corporation_id,
-            character_ownership__user__profile__main_character__corporation_id__in=(
-                AltManagerConfiguration.get_member_corporation_ids()
-            )
+        known_members_in_member_corps = get_known_corporation_members_from_members(
+            _c.corporation_id
         ).count()
 
         output[_c.corporation_id] = {
@@ -404,7 +413,7 @@ def get_sanctionable_corps(request, *args):
             "known_members_in_member_corps": known_members_in_member_corps,
         }
 
-    logger.warning(f"req  {output}")
+    #  logger.warning(f"req {output}")
 
     corporations = EveCorporationInfo.objects.filter(
         corporation_id__in=characters.values_list("corporation_id")
@@ -416,16 +425,12 @@ def get_sanctionable_corps(request, *args):
                 if _c.corporation_id not in output:
                     logger.warning(_c)
                     _a = _c.alliance
-                    known_members = EveCharacter.objects.filter(
-                        corporation_id=_c.corporation_id,
-                        character_ownership__isnull=False
+                    known_members = get_known_corporation_members(
+                        _c.corporation_id
                     ).count()
 
-                    known_members_in_member_corps = EveCharacter.objects.filter(
-                        corporation_id=_c.corporation_id,
-                        character_ownership__user__profile__main_character__corporation_id__in=(
-                            AltManagerConfiguration.get_member_corporation_ids()
-                        )
+                    known_members_in_member_corps = get_known_corporation_members_from_members(
+                        _c.corporation_id
                     ).count()
 
                     output[_c.corporation_id] = {
@@ -451,23 +456,7 @@ def get_sanctionable_corps(request, *args):
     tags=["alliances"]
 )
 def get_sanctionable_alliances(request):
-    # output = {}
-
-    members = AltManagerConfiguration.get_member_corporation_ids()
-
-    _corps = request.user.character_ownerships.all(
-    ).exclude(
-        character__corporation_id__in=members
-    )
-
-    _alliances = EveAllianceInfo.objects.filter(
-        alliance_id__in=_corps.values_list(
-            "character__alliance_id",
-            flat=True
-        )
-    )
-
-    return _alliances
+    return get_user_sanctionable_alliances(request.user)
 
 
 @api.get(
@@ -512,16 +501,12 @@ def get_sanction_actions(request):
     for _s in sanctions:
         _c = _s.request.corporation
 
-        known_members = EveCharacter.objects.filter(
-            corporation_id=_c.corporation_id,
-            character_ownership__isnull=False
+        known_members = get_known_corporation_members(
+            _c.corporation_id
         ).count()
 
-        known_members_in_member_corps = EveCharacter.objects.filter(
-            corporation_id=_c.corporation_id,
-            character_ownership__user__profile__main_character__corporation_id__in=(
-                AltManagerConfiguration.get_member_corporation_ids()
-            )
+        known_members_in_member_corps = get_known_corporation_members_from_members(
+            _c.corporation_id
         ).count()
 
         output[_c.corporation_id] = {

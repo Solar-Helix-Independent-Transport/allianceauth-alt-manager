@@ -3,21 +3,12 @@ from collections import defaultdict
 
 from allianceauth.authentication.models import CharacterOwnership
 from allianceauth.eveonline.evelinks import dotlan, evewho, zkillboard
-# from allianceauth.eveonline.evelinks import dotlan, eveimageserver, zkillboard
-from allianceauth.eveonline.models import (EveAllianceInfo, EveCharacter,
-                                           EveCorporationInfo)
+from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from django.contrib.auth.models import User
-# from allianceauth.notifications import notify
-# from django.contrib.auth.models import User
 from django.db import models
-# from django.utils import timezone
 from solo.models import SingletonModel
 
 from .managers import SanctionManager
-
-# from allianceauth.authentication.models import (CharacterOwnership, State,
-#                                                 UserProfile)
-
 
 logger = logging.getLogger(__name__)
 
@@ -124,32 +115,154 @@ class AltCorpTarget(models.Model):
         default_permissions = []
 
 
-class AltCorpRecord(models.Model):
-
-    objects = SanctionManager()
-
+class SanctionBase(models.Model):
     request_date = models.DateTimeField(auto_created=True)
+    sanctioned = models.BooleanField(default=False)
+    approved = models.BooleanField(default=False)
+    pending_revoke = models.DateTimeField(default=None, blank=True, null=True)
+    revoked = models.BooleanField(default=False)
+    revoked_reason = models.TextField(
+        blank=True,
+        null=True,
+        default=None,
+        help_text="The revoke/pending revoke reason"
+    )
+
+    def approve(self, approver=None, sanctioner=None):
+        if not approver and not sanctioner:
+            return False
+
+        if approver:
+            self.approved = True
+            self.request.approver = approver
+            self.request.approver_character_name = approver.character_name
+            self.request.approver_corporation_name = approver.corporation_name
+            self.request.save()
+            self.save()
+
+        if sanctioner:
+            self.sanctioned = True
+            self.request.sanctioner = sanctioner
+            self.request.sanctioner_character_name = sanctioner.character_name
+            self.request.sanctioner_corporation_name = sanctioner.corporation_name
+            self.request.save()
+            self.save()
+
+    def revoke(self, user=None, message=""):
+        usr = "Admin"
+        if user:
+            usr = user.profile.main_character.character_name
+        self.revoked_reason = f"Revoked by {usr} {message}"
+        self.revoked = True
+        self.sanctioned = False
+        self.approved = False
+        self.save()
+
+    def remove_sanction(self, user=None):
+        self.sanctioned = False
+        self.request.sanctioner = None
+        self.request.approver = None
+        self.save()
+        self.request.save()
+
+    def clear_revoke(self):
+        self.revoked_reason = None
+        self.revoked = False
+        if self.request.sanctioner is not None:
+            self.sanctioned = True
+        if self.request.approver is not None:
+            self.approved = True
+        self.save()
+
+    class Meta:
+        abstract = True
+
+
+class HistoryBase(models.Model):
+    request_date = models.DateTimeField(auto_created=True)
+
+    owner = models.ForeignKey(
+        EveCharacter,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        default=None,
+        help_text="The owner character model",
+        related_name="+"
+    )
+    owner_character_name = models.CharField(
+        max_length=250,
+        blank=True,
+        null=True,
+        default=None,
+        help_text="The owner character name at time of claim"
+    )
+    owner_corporation_name = models.CharField(
+        max_length=250,
+        blank=True,
+        null=True,
+        default=None,
+        help_text="The owners corporation name at time of claim"
+    )
+    sanctioner = models.ForeignKey(
+        EveCharacter,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        default=None,
+        help_text="The owner character model",
+        related_name="+"
+    )
+    sanctioner_character_name = models.CharField(
+        max_length=250,
+        blank=True,
+        null=True,
+        default=None,
+        help_text="The sanctioning character name at time of sanction"
+    )
+    sanctioner_corporation_name = models.CharField(
+        max_length=250,
+        blank=True,
+        null=True,
+        default=None,
+        help_text="The sanctioning characters corporation name at time of sanction"
+    )
+    approver = models.ForeignKey(
+        EveCharacter,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        default=None,
+        help_text="The approver model",
+        related_name="+"
+    )
+    approver_character_name = models.CharField(
+        max_length=250,
+        blank=True,
+        null=True,
+        default=None,
+        help_text="The approving character name at time of sanction"
+    )
+    approver_corporation_name = models.CharField(
+        max_length=250,
+        blank=True,
+        null=True,
+        default=None,
+        help_text="The approving characters corporation name at time of sanction"
+    )
+
+    class Meta:
+        abstract = True
+
+
+class AltCorpRecord(SanctionBase):
+    objects = SanctionManager()
 
     actual_members = models.IntegerField(
         default=None,
         blank=True,
         null=True,
         help_text="Member count as detected via member endpoint."
-    )
-
-    sanctioned = models.BooleanField(default=False)
-
-    approved = models.BooleanField(default=False)
-
-    pending_revoke = models.DateTimeField(default=None, blank=True, null=True)
-
-    revoked = models.BooleanField(default=False)
-
-    revoked_reason = models.TextField(
-        blank=True,
-        null=True,
-        default=None,
-        help_text="The revoke/pending revoke reason"
     )
 
     def still_valid(self):
@@ -222,52 +335,6 @@ class AltCorpRecord(models.Model):
         chid = AltManagerConfiguration.get_solo().management_channel_id
         send_discord_message(channel_id=chid, embed=embed)
 
-    def approve(self, approver=None, sanctioner=None):
-        if not approver and not sanctioner:
-            return False
-
-        if approver:
-            self.approved = True
-            self.request.approver = approver
-            self.request.approver_character_name = approver.character_name
-            self.request.approver_corporation_name = approver.corporation_name
-            self.request.save()
-            self.save()
-
-        if sanctioner:
-            self.sanctioned = True
-            self.request.sanctioner = sanctioner
-            self.request.sanctioner_character_name = sanctioner.character_name
-            self.request.sanctioner_corporation_name = sanctioner.corporation_name
-            self.request.save()
-            self.save()
-
-    def revoke(self, user=None, message=""):
-        usr = "Admin"
-        if user:
-            usr = user.profile.main_character.character_name
-        self.revoked_reason = f"Revoked by {usr} {message}"
-        self.revoked = True
-        self.sanctioned = False
-        self.approved = False
-        self.save()
-
-    def remove_sanction(self, user=None):
-        self.sanctioned = False
-        self.request.sanctioner = None
-        self.request.approver = None
-        self.save()
-        self.request.save()
-
-    def clear_revoke(self):
-        self.revoked_reason = None
-        self.revoked = False
-        if self.request.sanctioner is not None:
-            self.sanctioned = True
-        if self.request.approver is not None:
-            self.approved = True
-        self.save()
-
     def __str__(self):
         try:
             return (
@@ -282,8 +349,7 @@ class AltCorpRecord(models.Model):
         default_permissions = []
 
 
-class AltCorpHistory(models.Model):
-
+class AltCorpHistory(HistoryBase):
     request = models.OneToOneField(
         AltCorpRecord,
         on_delete=models.SET_NULL,
@@ -292,7 +358,6 @@ class AltCorpHistory(models.Model):
         default=True,
         related_name="request"
     )
-
     target = models.ForeignKey(
         AltCorpTarget,
         on_delete=models.SET_NULL,
@@ -300,9 +365,6 @@ class AltCorpHistory(models.Model):
         blank=True,
         default=None
     )
-
-    request_date = models.DateTimeField(auto_created=True)
-
     corporation = models.ForeignKey(
         EveCorporationInfo,
         on_delete=models.SET_NULL,
@@ -310,93 +372,139 @@ class AltCorpHistory(models.Model):
         null=True,
         default=None,
     )
-
     corporation_name = models.CharField(
         max_length=250
-    )
-
-    owner = models.ForeignKey(
-        EveCharacter,
-        on_delete=models.SET_NULL,
-        blank=True,
-        null=True,
-        default=None,
-        help_text="The owner character model",
-        related_name="alt_owner"
-    )
-
-    owner_character_name = models.CharField(
-        max_length=250,
-        blank=True,
-        null=True,
-        default=None,
-        help_text="The owner character name at time of claim"
-    )
-
-    owner_corporation_name = models.CharField(
-        max_length=250,
-        blank=True,
-        null=True,
-        default=None,
-        help_text="The owners corporation name at time of claim"
-    )
-
-    sanctioner = models.ForeignKey(
-        EveCharacter,
-        on_delete=models.SET_NULL,
-        blank=True,
-        null=True,
-        default=None,
-        help_text="The owner character model",
-        related_name="alt_sanctioner"
-
-    )
-
-    sanctioner_character_name = models.CharField(
-        max_length=250,
-        blank=True,
-        null=True,
-        default=None,
-        help_text="The sanctioning character name at time of sanction"
-    )
-
-    sanctioner_corporation_name = models.CharField(
-        max_length=250,
-        blank=True,
-        null=True,
-        default=None,
-        help_text="The sanctioning characters corporation name at time of sanction"
-    )
-
-    approver = models.ForeignKey(
-        EveCharacter,
-        on_delete=models.SET_NULL,
-        blank=True,
-        null=True,
-        default=None,
-        help_text="The approver model",
-        related_name="alt_approver"
-    )
-
-    approver_character_name = models.CharField(
-        max_length=250,
-        blank=True,
-        null=True,
-        default=None,
-        help_text="The approving character name at time of sanction"
-    )
-
-    approver_corporation_name = models.CharField(
-        max_length=250,
-        blank=True,
-        null=True,
-        default=None,
-        help_text="The approving characters corporation name at time of sanction"
     )
 
     def __str__(self):
         try:
             return f"{self.request_date} - {self.corporation_name} - {self.owner_character_name}"
+        except Exception:
+            return f"{self.id} - {self.request_date}"
+
+    class Meta:
+        default_permissions = []
+
+
+class AltRecord(SanctionBase):
+
+    objects = SanctionManager()
+
+    def still_valid(self):
+        pass
+
+    def notify_owner(self, message):
+        embed = {
+            "title": f"Alt Manager Update - {self.request.entity_name}",
+            "description": (
+                f"{message}"
+                # f"[DotLan]({dotlan.corporation_url(self.request.corporation.corporation_name)})\n"
+                # f"[zKill]({zkillboard.corporation_url(self.request.corporation.corporation_id)})\n"
+                # f"[EvE Who]({evewho.corporation_url(self.request.corporation.corporation_id)})\n\n"
+            ),
+            "color": RED,
+            # "thumbnail": {
+            #     "url": (
+            #         "https://images.evetech.net/corporations/"
+            #         f"{self.request.corporation.corporation_id}/logo"
+            #     )
+            # }
+        }
+
+        if not self.revoked:
+            if self.approved:
+                embed["color"] = GREEN
+            else:
+                embed["color"] = BLUE
+        else:
+            embed["color"] = RED
+
+        send_discord_message(user_pk=self.request.owner.character_ownership.user_id, embed=embed)
+
+    def notify_managers(self, message, actor: EveCharacter = None):
+
+        embed = {
+            "title": f"Alt Management Update - {self.request.corporation.corporation_name}",
+            "description": (
+                f"{message}"
+                # f"[DotLan]({dotlan.corporation_url(self.request.corporation_name)})\n"
+                # f"[zKill]({zkillboard.corporation_url(self.request.corporation.corporation_id)})\n"
+                # f"[EvE Who]({evewho.corporation_url(self.request.corporation.corporation_id)})\n\n"
+                # f"**Owner: {self.request.owner.character_name}**\n"
+                # f"[Zkill]({zkillboard.character_url(self.request.owner.character_id)})\n"
+                # f"[EvE Who]({evewho.character_url(self.request.owner.character_id)})\n"
+            ),
+            "color": RED,
+            # "thumbnail": {
+            #     "url": (
+            #         "https://images.evetech.net/corporations/"
+            #         f"{self.request.corporation.corporation_id}/logo"
+            #     )
+            # },
+        }
+        if actor:
+            embed["description"] += (
+                f"\n**Actor: {actor.character_name}**\n"
+                f"[Zkill]({zkillboard.character_url(actor.character_id)})\n"
+                f"[EvE Who]({evewho.character_url(actor.character_id)})\n"
+            )
+
+        if not self.revoked:
+            if self.approved:
+                embed["color"] = GREEN
+            else:
+                embed["color"] = BLUE
+        else:
+            embed["color"] = RED
+
+        chid = AltManagerConfiguration.get_solo().management_channel_id
+        send_discord_message(channel_id=chid, embed=embed)
+
+    def __str__(self):
+        try:
+            return (
+                f"{self.request_date} - "
+                f"{self.request.entity_name} - "
+                f"{self.request.owner_character_name}"
+            )
+        except Exception:
+            return f"{self.id} - {self.request_date}"
+
+    class Meta:
+        default_permissions = []
+
+
+EntityChoices = (
+    (0, "Alliance"),
+    (1, "Character")
+)
+
+
+class AltHistory(HistoryBase):
+
+    request = models.OneToOneField(
+        AltRecord,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        default=True,
+        related_name="request"
+    )
+
+    entity_id = models.BigIntegerField()
+
+    entity_name = models.CharField(
+        max_length=100,
+        choices=EntityChoices
+    )
+
+    entity_type = models.CharField(
+        max_length=250
+    )
+
+    def __str__(self):
+        try:
+            return f"{self.request_date} - {self.entity_name} - {self.owner_character_name}"
         except Exception:
             return f"{self.id} - {self.request_date}"
 

@@ -9,16 +9,15 @@ from esi.models import Token
 
 from . import __version__
 from .api import get_missing, get_sanction_actions, get_sanctionable_corps
-from .models import (AltCorpHistory, AltCorpRecord, AltCorpTarget,
-                     AltManagerConfiguration)
+from .helpers import (REQUIRED_SCOPES, get_and_update_member_list,
+                      get_known_corporation_members,
+                      get_known_corporation_members_from_members)
+from .models import AltCorpHistory, AltCorpRecord, AltCorpTarget
 from .providers import esi
-
-REQUIRED_SCOPES = ["esi-corporations.read_corporation_membership.v1"]
 
 
 @token_required(scopes=REQUIRED_SCOPES)
 def add_corp(request, token, corp_id=None):
-    print(corp_id)
     char = EveCharacter.objects.get_character_by_id(token.character_id)
     # This is more accurate and tests teh token at the same time.
     # TODO try catch and test for errors
@@ -89,8 +88,8 @@ def show_sanctions(request):
 
 
 @permission_required("altmanager.can_request_alt_corp")
-def alt_check(request, corp_id):
-    _status, data = get_missing(request, corp_id, check_members=True)
+def alt_check(request, entity_id: int):
+    _status, data = get_missing(request, entity_id, check_members=True)
     if _status != 200:
         messages.warning(
             request,
@@ -113,118 +112,91 @@ def alt_check(request, corp_id):
 
 
 @permission_required("altmanager.can_request_alt_corp")
-def claim_corp(request, corp_id=None, req_target_id=None):
-    char_ids = EveCharacter.objects.filter(
-        corporation_id=corp_id).values('character_id')
+def claim_corp(request, entity_id=None, entity_type="corporation", req_target_id=None):
+    if entity_type == "corporation":
+        existing = AltCorpRecord.objects.filter(
+            request__corporation__corporation_id=entity_id
+        ).exists()
 
-    existing = AltCorpRecord.objects.filter(
-        request__corporation__corporation_id=corp_id
-    ).exists()
-
-    if existing:
-        messages.error(request, "Unable to claim corp. corp already claimed")
-        return redirect('altmanager:request')
-
-    tokens = Token.objects.filter(
-        character_id__in=char_ids,
-        user=request.user).require_scopes(REQUIRED_SCOPES)
-
-    if tokens.exists():
-        token = tokens.first()
-
-        char = EveCharacter.objects.get_character_by_id(
-            token.character_id
-        )
-
-        members = esi.client.Corporation.get_corporations_corporation_id_members(
-            corporation_id=corp_id,
-            token=token.valid_access_token()
-        ).results()
-
-        if req_target_id is not None:
-            corp, created = EveCorporationInfo.objects.update_or_create(
-                corporation_id=corp_id,
-                defaults={
-                    'member_count': len(members),
-                    'corporation_ticker': char.corporation_ticker,
-                    'corporation_name': char.corporation_name
-                }
-            )
-
-            record = AltCorpRecord.objects.create(
-                request_date=timezone.now(),
-                actual_members=len(members),
-            )
-
-            AltCorpHistory.objects.create(
-                request_date=timezone.now(),
-                request=record,
-                corporation=corp,
-                target_id=req_target_id,
-                corporation_name=corp.corporation_name,
-                owner=request.user.profile.main_character,
-                owner_corporation_name=request.user.profile.main_character.corporation_name,
-                owner_character_name=request.user.profile.main_character.character_name,
-            )
-
-            _msg = (
-                f"New `{record.request.target.name}` request created for `{corp.corporation_name}` "
-                f"by `{request.user.profile.main_character}`, sanctioning pending."
-            )
-            messages.info(
-                request,
-                _msg
-            )
-            record.notify_managers(
-                _msg
-            )
-
+        if existing:
+            messages.error(request, "Unable to claim corp. corp already claimed")
             return redirect('altmanager:request')
-        else:
-            targets = AltCorpTarget.objects.all()
 
-            known_members = EveCharacter.objects.filter(
-                corporation_id=corp_id,
-                character_ownership__isnull=False
-            ).count()
+        corp, members = get_and_update_member_list()
 
-            known_members_in_member_corps = EveCharacter.objects.filter(
-                corporation_id=corp_id,
-                character_ownership__user__profile__main_character__corporation_id__in=(
-                    AltManagerConfiguration.get_member_corporation_ids()
+        if members:
+            if req_target_id is not None:
+                record = AltCorpRecord.objects.create(
+                    request_date=timezone.now(),
+                    actual_members=len(members),
                 )
-            ).count()
 
-            return render(
-                request,
-                'altmanager/targets.html',
-                context={
-                    "version": __version__,
-                    "app_name": "altmanager",
-                    "page_title": "Alt Manager",
-                    'corporation_name': char.corporation_name,
-                    'corporation_id': char.corporation_id,
-                    "targets": targets,
-                    'corporation_ticker': char.corporation_ticker,
-                    "known_members": known_members,
-                    "known_members_in_member_corps": known_members_in_member_corps
-                }
-            )
+                AltCorpHistory.objects.create(
+                    request_date=timezone.now(),
+                    request=record,
+                    corporation=corp,
+                    target_id=req_target_id,
+                    corporation_name=corp.corporation_name,
+                    owner=request.user.profile.main_character,
+                    owner_corporation_name=request.user.profile.main_character.corporation_name,
+                    owner_character_name=request.user.profile.main_character.character_name,
+                )
+
+                _msg = (
+                    f"New `{record.request.target.name}` request created for "
+                    f"`{corp.corporation_name}` "
+                    f"by `{request.user.profile.main_character}`, sanctioning pending."
+                )
+                messages.info(
+                    request,
+                    _msg
+                )
+                record.notify_managers(
+                    _msg
+                )
+
+                return redirect('altmanager:request')
+            else:
+                targets = AltCorpTarget.objects.all()
+
+                known_members = get_known_corporation_members(entity_id).count()
+
+                known_members_in_member_corps = get_known_corporation_members_from_members(
+                    entity_id
+                ).count()
+
+                return render(
+                    request,
+                    'altmanager/targets.html',
+                    context={
+                        "version": __version__,
+                        "app_name": "altmanager",
+                        "page_title": "Alt Manager",
+                        'corporation_name': corp.corporation_name,
+                        'corporation_id': corp.corporation_id,
+                        "targets": targets,
+                        'corporation_ticker': corp.corporation_ticker,
+                        "known_members": known_members,
+                        "known_members_in_member_corps": known_members_in_member_corps
+                    }
+                )
+    elif entity_type == "alliance":
+        pass  # TODO other type of request.
 
     else:
         messages.error(
-            request, "No Tokens found. Please add a membership token."
+            request, "No Tokens found. Please add membership tokens."
         )
 
     return redirect('altmanager:request')
 
 
 @permission_required("altmanager.can_sanction_own_corp")
-def sanction_approve_corp(request, corp_id=None):
+def sanction_approve_corp(request, entity_id=None):
     vis = AltCorpRecord.objects.visible_to(
         request.user
     ).filter(
-        request__corporation__corporation_id=corp_id
+        request__corporation__corporation_id=entity_id
     )
 
     if vis.count() != 1:
@@ -259,11 +231,11 @@ def sanction_approve_corp(request, corp_id=None):
 
 
 @permission_required("altmanager.can_sanction_own_corp")
-def sanction_revoke_corp(request, corp_id=None):
+def sanction_revoke_corp(request, entity_id=None):
     vis = AltCorpRecord.objects.visible_to(
         request.user
     ).filter(
-        request__corporation__corporation_id=corp_id
+        request__corporation__corporation_id=entity_id
     )
 
     if vis.count() != 1:
@@ -307,11 +279,11 @@ def sanction_revoke_corp(request, corp_id=None):
 
 
 @permission_required("altmanager.can_sanction_all")
-def sanction_clear_revoke_corp(request, corp_id=None):
+def sanction_clear_revoke_corp(request, entity_id=None):
     vis = AltCorpRecord.objects.visible_to(
         request.user
     ).filter(
-        request__corporation__corporation_id=corp_id
+        request__corporation__corporation_id=entity_id
     )
 
     if vis.count() != 1:
@@ -342,11 +314,11 @@ def sanction_clear_revoke_corp(request, corp_id=None):
 
 
 @permission_required("altmanager.can_sanction_all")
-def sanction_delete_corp(request, corp_id=None):
+def sanction_delete_corp(request, entity_id=None):
     vis = AltCorpRecord.objects.visible_to(
         request.user
     ).filter(
-        request__corporation__corporation_id=corp_id
+        request__corporation__corporation_id=entity_id
     )
 
     if vis.count() != 1:
@@ -379,11 +351,11 @@ def sanction_delete_corp(request, corp_id=None):
 
 
 @permission_required("altmanager.can_sanction_all")
-def approve_corp(request, corp_id=None):
+def approve_corp(request, entity_id=None):
     vis = AltCorpRecord.objects.visible_to(
         request.user
     ).filter(
-        request__corporation__corporation_id=corp_id
+        request__corporation__corporation_id=entity_id
     )
 
     if vis.count() != 1:

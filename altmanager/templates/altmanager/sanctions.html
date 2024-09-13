@@ -6,25 +6,7 @@
 {% block page_title %}{{page_title}}{% endblock %}
 {% block header_nav_brand %}{{page_title}}{% endblock %}
 {% block header_nav_collapse_left %}
-
-{% if perms.altmanager.can_request_alt_corp %}
-    <li class="nav-item">
-        <a class="nav-link {% navactive request 'altmanager:request' %}" href="{% url 'altmanager:request' %}">{% translate "Request" %}</a>
-    </li>
-{% endif %}
-
-{% if perms.altmanager.can_sanction_own_corp %}
-    <li class="nav-item">
-        <a class="nav-link {% navactive request 'altmanager:sanctions' %}" href="{% url 'altmanager:sanctions' %}">{% translate "Sanctions" %}</a>
-    </li>
-{% endif %}
-
-{% if perms.altmanager.can_manage_alt_corp %}
-    <li class="nav-item">
-        <a class="nav-link {% navactive request 'altmanager:manage' %}" href="{% url 'altmanager:manage' %}">{% translate "Manage" %}</a>
-    </li>
-{% endif %}
-
+    {% include "altmanager/menu.html" %}
 {% endblock header_nav_collapse_left %}
 {% block content %}
     <div class="m-2">
@@ -86,11 +68,10 @@
                             <th class="text-end">Actions</th>
                             <th >Owner</th>
                             <th >State</th>
-
                         </tr>
                     </thead>
                     <tbody>
-                    {% for corp in corporations %}
+                        {% for corp in corporations %}
                         <tr>
                             <td class="align-middle">
                                 <img src="https://images.evetech.net/corporations/{{ corp.corporation_id }}/logo" width="32px" heght="32px"/>
@@ -114,7 +95,7 @@
                             <td class="align-middle text-center {% if corp.member_count == corp.known_member_count %}text-success{% else %}text-danger{% endif %}">
                                 {% if corp.known_member_count %}
                                     {% if corp.known_members_in_member_corps != corp.member_count %}
-                                        <a class="btn btn-sm {% if corp.known_member_count > corp.member_count %}btn-danger{% else %}btn-warning{% endif %}" href="/alts/detail/{{ corp.corporation_id }}">
+                                        <a class="btn btn-sm {% if corp.known_member_count > corp.member_count %}btn-danger{% else %}btn-warning{% endif %}" href="{% url 'altmanager:detail' corp.corporation_id %}">
                                             <i class="fas fa-external-link-alt fa-fw me-2"></i>
                                             {{ corp.known_member_count }}
                                             {% if corp.known_members_in_member_corps != corp.known_member_count %}<span class="text-danger">({{ corp.known_members_in_member_corps}})</span>{% endif %}
@@ -151,8 +132,8 @@
                                     {% if request.user.profile.main_character == corp.sanctioner %}
                                         {% if corp.sanctioner != None or corp.approver != None %}
                                             <a
-                                            class="btn btn-sm bg-danger"
-                                            href="/alts/revoke_sanction_corp/{{corp.corporation_id}}"
+                                                class="btn btn-sm bg-danger"
+                                                href="{% url 'altmanager:sanctions_revoke' corp.corporation_id %}"
                                             >Delete Approvals</a>
                                         {% endif %}
                                     {% else %}
@@ -161,19 +142,19 @@
                                 {% elif corp.sanctioned %}
                                     <a
                                         class="btn btn-sm bg-danger"
-                                        href="/alts/revoke_sanction_corp/{{corp.corporation_id}}"
+                                        href="{% url 'altmanager:sanctions_revoke' corp.corporation_id %}"
                                     >Revoke</a>
                                 {% else %}
                                     {% if corp.target.allow_non_members %}
                                         {% if corp.known_members_in_member_corps != corp.member_count %}
                                             <a
                                                 class="btn btn-sm btn-warning"
-                                                href="/alts/sanction_corp/{{corp.corporation_id}}"
+                                                href="{% url 'altmanager:sanctions_approve' corp.corporation_id %}"
                                             >Sanction - With Non-Members</a>
                                         {% else %}
                                             <a
-                                            class="btn btn-sm btn-success"
-                                            href="/alts/sanction_corp/{{corp.corporation_id}}"
+                                                class="btn btn-sm btn-success"
+                                                href="{% url 'altmanager:sanctions_approve' corp.corporation_id %}"
                                             >Sanction</a>
                                         {% endif %}
                                     {% else %}
@@ -182,7 +163,7 @@
                                         {% else %}
                                             <a
                                                 class="btn btn-sm btn-success"
-                                                href="/alts/sanction_corp/{{corp.corporation_id}}"
+                                                href="{% url 'altmanager:sanctions_approve' corp.corporation_id %}"
                                             >Sanction</a>
                                         {% endif %}
                                     {% endif %}
@@ -205,6 +186,117 @@
                                 {% endif %}
                             </td>
 
+                        </tr>
+                    {% endfor %}
+
+                    {% for entity in entities %}
+                        <tr>
+                            <td class="align-middle">
+                                <img src="https://images.evetech.net/corporations/{{ entity.corporation_id }}/logo" width="32px" heght="32px"/>
+                            </td>
+                            <td class="align-middle">
+                                {{ entity.corporation_name }}
+                            </td>
+                            <td class="align-middle text-center">
+                                <img src="https://images.evetech.net/characters/{{ entity.owner.character_id }}/portrait" width="32px" heght="32px"/>
+                            </td>
+                            <td class="align-middle">
+                                {{ entity.owner.character_name }}
+                                <figcaption class="figure-caption">{{ entity.owner.corporation_name }}</figcaption>
+                            </td>
+                            <td class="align-middle text-center {% if entity.member_count == entity.known_member_count %}text-success{% else %}text-danger{% endif %}">
+                                {% if entity.known_member_count %}
+                                    {% if entity.known_members_in_member_corps != entity.member_count %}
+                                        <a class="btn btn-sm {% if entity.known_member_count > entity.member_count %}btn-danger{% else %}btn-warning{% endif %}" href="{% url 'altmanager:detail' entity.corporation_id %}">
+                                            <i class="fas fa-external-link-alt fa-fw me-2"></i>
+                                            {{ entity.known_member_count }}
+                                            {% if entity.known_members_in_member_corps != entity.known_member_count %}<span class="text-danger">({{ entity.known_members_in_member_corps}})</span>{% endif %}
+                                             / {{ entity.member_count }}
+                                        </a>
+                                    {% else %}
+                                        {{ entity.known_member_count }}
+                                        {% if entity.known_members_in_member_corps != entity.known_member_count %}<span class="text-danger">({{ entity.known_members_in_member_corps}})</span>{% endif %}
+                                        / {{ entity.member_count }}
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                            <td class="align-middle text-center text-nowrap" >
+                                {% if entity.revoked %}
+                                    <span class="badge bg-danger">Revoked</span>
+                                    {% if entity.revoked_reason %}
+                                        <figcaption class="figure-caption">{{entity.revoked_reason}}</figcaption>
+                                    {% endif %}
+                                {% elif entity.approved %}
+                                    <span class="badge bg-success">Active</span>
+                                {% elif entity.sanctioned %}
+                                    <span class="badge bg-success">Sanctioned by: {{ entity.sanctioner.character_name }}</span>
+                                {% elif entity.owner %}
+                                    <span class="badge bg-primary">Awaiting Sanction Approval</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">No Application</span>
+                                {% endif %}
+                            </td>
+                            <td class="align-middle text-center" >
+                                {{ entity.target.name }}
+                            </td>
+                            <td class="align-middle text-end text-nowrap">
+                                {% if entity.revoked %}
+                                    {% if request.user.profile.main_character == entity.sanctioner %}
+                                        {% if entity.sanctioner != None or entity.approver != None %}
+                                            <a
+                                                class="btn btn-sm bg-danger"
+                                                href="{% url 'altmanager:sanctions_revoke' entity.corporation_id %}"
+                                            >Delete Approvals</a>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-warning">Contact Leadership to Action Revoke!</span>
+                                    {% endif %}
+                                {% elif entity.sanctioned %}
+                                    <a
+                                        class="btn btn-sm bg-danger"
+                                        href="{% url 'altmanager:sanctions_revoke' entity.corporation_id %}"
+                                    >Revoke</a>
+                                {% else %}
+                                    {% if entity.target.allow_non_members %}
+                                        {% if entity.known_members_in_member_corps != entity.member_count %}
+                                            <a
+                                                class="btn btn-sm btn-warning"
+                                                href="{% url 'altmanager:sanctions_approve' entity.corporation_id %}"
+                                            >Sanction - With Non-Members</a>
+                                        {% else %}
+                                            <a
+                                                class="btn btn-sm btn-success"
+                                                href="{% url 'altmanager:sanctions_approve' entity.corporation_id %}"
+                                            >Sanction</a>
+                                        {% endif %}
+                                    {% else %}
+                                        {% if entity.known_members_in_member_corps != entity.member_count %}
+                                            <span class="text-danger">Unable to Sanction (Membership Issue)</span>
+                                        {% else %}
+                                            <a
+                                                class="btn btn-sm btn-success"
+                                                href="{% url 'altmanager:sanctions_approve' entity.corporation_id %}"
+                                            >Sanction</a>
+                                        {% endif %}
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                            <td>
+                                {{ entity.owner.character_name }}
+                            </td>
+                            <td>
+                                {% if entity.revoked %}
+                                    Revoked
+                                {% elif entity.approved %}
+                                    Active
+                                {% elif entity.sanctioned %}
+                                    Sanctioned
+                                {% elif entity.owner %}
+                                    Awaiting Sanction Approval
+                                {% else %}
+                                    Unknown State
+                                {% endif %}
+                            </td>
                         </tr>
                     {% endfor %}
                     </tbody>

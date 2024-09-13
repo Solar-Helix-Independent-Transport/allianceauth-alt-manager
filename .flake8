@@ -1,5 +1,5 @@
 [flake8]
-max_line_length=100
+max_line_length=125
 ignore=F401
 exclude=
  - altmanager/migrations/*
