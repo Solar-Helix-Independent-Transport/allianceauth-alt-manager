@@ -122,7 +122,7 @@ def claim_corp(request, entity_id=None, entity_type="corporation", req_target_id
             messages.error(request, "Unable to claim corp. corp already claimed")
             return redirect('altmanager:request')
 
-        corp, members = get_and_update_member_list()
+        corp, members = get_and_update_member_list(entity_id)
 
         if members:
             if req_target_id is not None:

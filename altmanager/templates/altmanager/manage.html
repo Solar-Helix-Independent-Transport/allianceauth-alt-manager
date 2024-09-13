@@ -168,7 +168,7 @@
                                 {% elif corp.sanctioned %}
                                     <a
                                         class="btn btn-sm bg-success"
-                                        href="/alts/approve_corp/{{corp.corporation_id}}"
+                                        href="{% url 'altmanager:final_approve' corp.corporation_id %}"
                                     >Approve</a>
                                     <a
                                         class="btn btn-sm bg-danger"
