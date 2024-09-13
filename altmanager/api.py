@@ -129,16 +129,16 @@ def get_missing(request, corp_id: int, check_members: bool = False):
             f"Access Denied to {request.user} for c:{corp_id} No Perms")
         return 403, "Access Denied No Perms"
 
-    # if not request.user.is_superuser:
-    mbr = corp_id not in AltManagerConfiguration.get_member_corporation_ids()
-    usr = corp_id in get_corps_for_user(request.user)
-    vis_to = AltCorpRecord.objects.visible_to(
-        request.user
-    ).filter(request__corporation__corporation_id=corp_id).exists()
-    if not (mbr and (usr or vis_to)):
-        logger.warning(
-            f"Access Denied to {request.user} for c:{corp_id} Not visible")
-        return 403, "Access Denied Not Visible"
+    if not request.user.is_superuser:
+        mbr = corp_id not in AltManagerConfiguration.get_member_corporation_ids()
+        usr = corp_id in get_corps_for_user(request.user)
+        vis_to = AltCorpRecord.objects.visible_to(
+            request.user
+        ).filter(request__corporation__corporation_id=corp_id).exists()
+        if not (mbr and (usr or vis_to)):
+            logger.warning(
+                f"Access Denied to {request.user} for c:{corp_id} Not visible")
+            return 403, "Access Denied Not Visible"
 
     if corp_id == 0:
         return 200, {
