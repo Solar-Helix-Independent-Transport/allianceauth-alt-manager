@@ -472,11 +472,20 @@ def get_sanctionable_alliances(request):
 
 @api.get(
     "/get_all_sanctionable_alliances",
-    response={200: List[schema.Alliance]},
+    response={200: List[schema.Alliance], 403: str},
     tags=["alliances"]
 )
 def get_avail_sanctionable_alliances(request):
-    return get_all_sanctionable_alliances()
+    if not (
+        request.user.has_perm(
+            "altmanager.su_access"
+        )
+    ):
+        logger.warning(
+            f"Access Denied to {request.user} for get_all_sanctionable_alliances No Perms")
+        return 403, "Access Denied No Perms"
+
+    return 200, get_all_sanctionable_alliances()
 
     # mc_id = request.user.profile.main_character.character_id
 
