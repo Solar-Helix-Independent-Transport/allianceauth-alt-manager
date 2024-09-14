@@ -252,7 +252,13 @@ def get_missing_alliance_members(request, alliance_id: int):
         alliance_id=alliance_id
     ).result()
 
-    for c in corps:
+    db_corps = EveCorporationInfo.objects.filter(
+        alliance_id=alliance_id
+    ).exclude(
+        corporation_id__in=corps
+    ).values_list("corporation_id")
+
+    def process_corp(corp_id, esi=False):
         try:
             _code, corp_data = get_missing(request, corp_id=c)
             if _code == 200:
@@ -291,7 +297,8 @@ def get_missing_alliance_members(request, alliance_id: int):
                     },
                     "unknowns": corp_data["unknowns"],
                     "knowns": corp_data["knowns"],
-                    "esi_checked": True
+                    "esi_checked": True,
+                    "esi_alliance": esi
                 })
             else:
                 _c = EveCorporationInfo.objects.get(corporation_id=c)
@@ -302,10 +309,28 @@ def get_missing_alliance_members(request, alliance_id: int):
                     },
                     "unknowns": -1,
                     "knowns": -1,
-                    "esi_checked": False
+                    "esi_checked": False,
+                    "esi_alliance": esi
                 })
         except Exception as e:
             logger.exception(e)
+            output["corporations"].append({
+                "corporation": {
+                    "corporation_id": corp_id,
+                    "corporation_name": f"ERROR:{corp_id}"
+                },
+                "unknowns": -2,
+                "knowns": -2,
+                "esi_checked": False,
+                "esi_alliance": esi
+            })
+
+    for c in corps:
+        process_corp(c, esi=True)
+
+    for c in db_corps:
+        process_corp(c, esi=False)
+
     return output
 
 
