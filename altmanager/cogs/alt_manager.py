@@ -86,7 +86,7 @@ class AltMan(commands.Cog):
         for m in members:
             out_text.add_line(f" - [{m.alliance_ticker}] ({m.corporation_ticker}) {m.character_name}")
             out_text.add_line(
-                f"   Main - [{m.character_ownership.user.profile.main_character.alliance_ticker}]"
+                f"   - Main: [{m.character_ownership.user.profile.main_character.alliance_ticker}]"
                 f" ({m.character_ownership.user.profile.main_character.corporation_ticker})"
                 f" {m.character_ownership.user.profile.main_character.character_name}"
             )
@@ -105,7 +105,7 @@ class AltMan(commands.Cog):
             out_text.add_line(f" - [{m.alliance_ticker}] ({m.corporation_ticker}) {m.character_name}")
             try:
                 out_text.add_line(
-                    f"   Main - [{m.character_ownership.user.profile.main_character.alliance_ticker}]"
+                    f"   - Main: [{m.character_ownership.user.profile.main_character.alliance_ticker}]"
                     f" ({m.character_ownership.user.profile.main_character.corporation_ticker})"
                     f" {m.character_ownership.user.profile.main_character.character_name}"
                 )
