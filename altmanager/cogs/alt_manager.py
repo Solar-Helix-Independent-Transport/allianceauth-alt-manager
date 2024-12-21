@@ -41,7 +41,7 @@ class AltMan(commands.Cog):
     async def list_member_corps(self, ctx):
         out_text = Paginator()
         await ctx.defer(ephemeral=False)
-        for c in AltManagerConfiguration.get_solo().member_corps.all():
+        for c in AltManagerConfiguration.get_solo().member_corps.all().order_by("corporation_name"):
             out_text.add_line(c.corporation_name)
         
         for _str in out_text.pages:
