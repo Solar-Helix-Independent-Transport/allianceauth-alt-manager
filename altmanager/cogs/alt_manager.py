@@ -81,6 +81,13 @@ class AltMan(commands.Cog):
         ).select_related(
             "character_ownership__user__profile__main_character"
         )
+
+        members__propper = helpers.get_known_corporation_members_from_members(
+            entity_id
+        ).select_related(
+            "character_ownership__user__profile__main_character"
+        )
+        
         out_text.add_line(f"Known members (ALL): (Total {members.count()})")
         out_text.add_line(f"{members}")
         for m in members:
@@ -95,13 +102,8 @@ class AltMan(commands.Cog):
         out_text.add_line(f"*************************************************************************") 
         out_text.add_line("")
 
-        members = helpers.get_known_corporation_members_from_members(
-            entity_id
-        ).select_related(
-            "character_ownership__user__profile__main_character"
-        )
-        out_text.add_line(f"Known members (Member Corps Only): (Total {members.count()})")
-        for m in members:
+        out_text.add_line(f"Known members (Mains in Member Corps Only): (Total {members__propper.count()})")
+        for m in members__propper:
             out_text.add_line(f" - [{m.alliance_ticker}] ({m.corporation_ticker}) {m.character_name}")
             try:
                 out_text.add_line(

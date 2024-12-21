@@ -53,9 +53,9 @@ def get_known_corporation_members(corporation_id: int) -> QuerySet[EveCharacter]
         corporation_id=corporation_id,
         character_ownership__isnull=False
     )
-    logger.warning(corporation_id)
-    logger.warning(characters)
-    logger.warning(characters.count())
+    # logger.warning(corporation_id)
+    # logger.warning(characters)
+    # logger.warning(characters.count())
     return characters
 
 
@@ -66,9 +66,9 @@ def get_known_corporation_members_from_members(corporation_id: int) -> QuerySet[
             AltManagerConfiguration.get_member_corporation_ids()
         )
     )
-    logger.warning(corporation_id)
-    logger.warning(characters)
-    logger.warning(characters.count())
+    # logger.warning(corporation_id)
+    # logger.warning(characters)
+    # logger.warning(characters.count())
     return characters
 
 
