@@ -116,7 +116,7 @@ def get_stats_for_corp(request, corp_id: int):
 
 @api.get(
     "/get_missing/{corp_id}",
-    response={200: dict, 500: str, 403: str},
+    response={200: dict, 500: str, 403: str, 404: str},
     tags=["Corps"]
 )
 def get_missing(request, corp_id: int, check_members: bool = False):
@@ -154,7 +154,10 @@ def get_missing(request, corp_id: int, check_members: bool = False):
             corp_id=corp_id,
             scopes=["esi-corporations.read_corporation_membership.v1"]
         )
-
+        
+        if not token:
+            return 404, f"No Token found, please add a new corporate token for this corporation {corp_id}!"
+        
         data = providers.esi.client.Corporation.get_corporations_corporation_id_members(
             corporation_id=corp_id, token=token.valid_access_token()
         ).result()
@@ -225,7 +228,7 @@ def get_missing(request, corp_id: int, check_members: bool = False):
 
     except Exception as e:
         logger.exception(e)
-        return 500, "Error from ESI {e}"
+        return 500, f"Error from ESI {e}"
 
 
 @api.get(

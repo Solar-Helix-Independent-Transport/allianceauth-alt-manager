@@ -1,3 +1,5 @@
+import logging
+
 from allianceauth.authentication.models import CharacterOwnership
 from allianceauth.eveonline.models import (EveAllianceInfo, EveCharacter,
                                            EveCorporationInfo)
@@ -10,6 +12,8 @@ from altmanager.models import AltManagerConfiguration
 from .providers import esi
 
 REQUIRED_SCOPES = ["esi-corporations.read_corporation_membership.v1"]
+
+logger = logging.getLogger(__name__)
 
 
 def get_all_sanctionable_alliances() -> QuerySet[EveAllianceInfo]:
@@ -45,19 +49,27 @@ def get_user_sanctionable_alliances(user) -> QuerySet[EveAllianceInfo]:
 
 
 def get_known_corporation_members(corporation_id: int) -> QuerySet[EveCharacter]:
-    return EveCharacter.objects.filter(
+    characters = EveCharacter.objects.filter(
         corporation_id=corporation_id,
         character_ownership__isnull=False
     )
+    logger.warning(corporation_id)
+    logger.warning(characters)
+    logger.warning(characters.count())
+    return characters
 
 
 def get_known_corporation_members_from_members(corporation_id: int) -> QuerySet[EveCharacter]:
-    return EveCharacter.objects.filter(
+    characters = EveCharacter.objects.filter(
         corporation_id=corporation_id,
         character_ownership__user__profile__main_character__corporation_id__in=(
             AltManagerConfiguration.get_member_corporation_ids()
         )
     )
+    logger.warning(corporation_id)
+    logger.warning(characters)
+    logger.warning(characters.count())
+    return characters
 
 
 def get_and_update_member_list(entity_id, user=None):
