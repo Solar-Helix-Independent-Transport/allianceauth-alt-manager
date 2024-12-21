@@ -67,7 +67,7 @@ class AltMan(commands.Cog):
 
         out_text.add_line(f"Corporation: {corp.corporation_name} ({entity_id})")
         corp, members = helpers.get_and_update_member_list(entity_id)
-        out_text.add_line(f"Members (ESI Lookup - get_corporations_corporation_id_members): {members}")
+        out_text.add_line(f"Members (ESI Lookup - get_corporations_corporation_id_members): {len(members)}")
 
         out_text.add_line("") 
         out_text.add_line(f"*************************************************************************") 
@@ -79,6 +79,7 @@ class AltMan(commands.Cog):
             "character_ownership__user__profile__main_character"
         )
         out_text.add_line(f"Known members (ALL): (Total {members.count()})")
+        out_text.add_line(f"{members}")
         for m in members:
             out_text.add_line(f" - [{m.alliance_ticker}] ({m.corporation_ticker}) {m.character_name}")
         
