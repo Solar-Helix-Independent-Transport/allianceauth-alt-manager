@@ -31,7 +31,7 @@
                     {% if req.allow_non_members %}
                         <a class="btn bg-primary w-100" href="/alts/apply_corp/{{corporation_id}}/{{req.id}}">Request</a>
                     {% else %}
-                        {% if known_members_in_member_corps != member_count %}
+                        {% if known_members_in_member_corps != known_members %}
                             <span class="text-danger text-center">
                                 Non Member Linked Characters Found
                                 <br/>
