@@ -52,9 +52,10 @@ def register_url():
 
 @hooks.register('discord_cogs_hook')
 def register_cogs():
-    return []
+    return ["altmanager.cogs.alt_manager"]
 
 
 @hooks.register("secure_group_filters")
 def filters():
     return [models.MainInMemberCorpFilter, ]
+

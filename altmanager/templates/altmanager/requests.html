@@ -146,7 +146,7 @@
                         {% else %}
                             {% if corp.known_member_count != corp.member_count %}
                                 <span class="text-danger">Unable to Claim (Add all Members)</span>
-                            {% else %}
+                            {% elif corp %}
                                 <a class="btn btn-sm bg-secondary" href="{% url 'altmanager:claim_direct' corp.corporation_id 'corporation' %}">
                                     Claim Corporation
                                 </a>
@@ -220,7 +220,7 @@
                         {% else %}
                             {% if corp.known_member_count != corp.member_count %}
                                 <span class="text-danger">Unable to Claim (Add all Members)</span>
-                            {% else %}
+                            {% elif corp %}
                                 <a class="btn btn-sm bg-secondary" href="{% url 'altmanager:claim_direct' corp.corporation_id 'entity' %}">
                                     Claim Corporation
                                 </a>

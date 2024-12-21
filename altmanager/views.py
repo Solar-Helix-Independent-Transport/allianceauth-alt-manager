@@ -45,7 +45,7 @@ def react_main(request, cid):
         context={
             "version": __version__,
             "app_name": "altmanager",
-            "page_title": "Alt Manager"
+            "page_title": "Alt Sanctioning"
         }
     )
 
@@ -66,7 +66,7 @@ def request_main(request):
         context={
             "version": __version__,
             "app_name": "altmanager",
-            "page_title": "Alt Manager",
+            "page_title": "Alt Sanctioning",
             "corporations": data
         }
     )
@@ -81,7 +81,7 @@ def show_sanctions(request):
         context={
             "version": __version__,
             "app_name": "altmanager",
-            "page_title": "Alt Manager",
+            "page_title": "Alt Sanctioning",
             "corporations": data
         }
     )
@@ -102,7 +102,7 @@ def alt_check(request, entity_id: int):
         context={
             "version": __version__,
             "app_name": "altmanager",
-            "page_title": "Alt Manager",
+            "page_title": "Alt Sanctioning",
             "corporation": data['corporation'],
             "characters": data['characters'],
             "known_non_members": data['known_non_members'],
@@ -171,7 +171,7 @@ def claim_corp(request, entity_id=None, entity_type="corporation", req_target_id
                     context={
                         "version": __version__,
                         "app_name": "altmanager",
-                        "page_title": "Alt Manager",
+                        "page_title": "Alt Sanctioning",
                         'corporation_name': corp.corporation_name,
                         'corporation_id': corp.corporation_id,
                         "targets": targets,
@@ -408,7 +408,7 @@ def show_manage(request):
         context={
             "version": __version__,
             "app_name": "altmanager",
-            "page_title": "Alt Manager",
+            "page_title": "Alt Sanctioning",
             "corporations": data
         }
     )
