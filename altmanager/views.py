@@ -12,7 +12,7 @@ from .api import get_missing, get_sanction_actions, get_sanctionable_corps
 from .helpers import (REQUIRED_SCOPES, get_and_update_member_list,
                       get_known_corporation_members,
                       get_known_corporation_members_from_members)
-from .models import AltCorpHistory, AltCorpRecord, AltCorpTarget
+from .models import AltCorpHistory, AltCorpRecord, AltCorpTarget, AltManagerConfiguration
 from .providers import esi
 
 
@@ -402,6 +402,7 @@ def approve_corp(request, entity_id=None):
 @permission_required("altmanager.can_sanction_all")
 def show_manage(request):
     data = get_sanction_actions(request)
+    all_member_corps = AltManagerConfiguration.get_solo().member_corps.all().select_related("alliance")
     return render(
         request,
         'altmanager/manage.html',
@@ -409,6 +410,7 @@ def show_manage(request):
             "version": __version__,
             "app_name": "altmanager",
             "page_title": "Alt Sanctioning",
-            "corporations": data
+            "corporations": data,
+            "members": all_member_corps
         }
     )

@@ -403,6 +403,41 @@
             <figcaption class="figure-caption">If the missing member list is empty then your issue is Cache. It will clear it's self.</figcaption>
         </div>
     </div>
+    {% if user.is_superuser %}
+    <div class="m-2">
+        <h4 class="strikeOut text-center" >Member Corporations</h4>
+        <div class="">
+            <div >
+                <table id="table-manage-corps" class="table">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th>Corp</th>
+                            <th>Alliance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for corp in members %}
+                        <tr>
+                            <td class="align-middle">
+                                <img src="https://images.evetech.net/corporations/{{ corp.corporation_id }}/logo" width="32px" heght="32px"/>
+                                {% if corp.alliance_id %}
+                                    <img class="ms-2" src="https://images.evetech.net/alliances/{{ corp.alliance.alliance_id }}/logo" width="32px" heght="32px"/>
+                                {% endif %}
+                            </td>
+                            <td class="align-middle">
+                                {{ corp.corporation_name }}
+                            </td>
+                            <td class="align-middle">
+                                {{ corp.alliance.alliance_name }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% endif %}
 {% endblock %}
 {% block extra_javascript %}
     <script src="https://cdn.datatables.net/2.1.3/js/dataTables.js"></script>
@@ -411,8 +446,8 @@
 
     <script>
         $(document).ready( function () {
-                $('#table-manage').DataTable({
-                    filterDropDown:
+            $('#table-manage').DataTable({
+                filterDropDown:
                     {
                         columns: [
                             {
@@ -434,16 +469,30 @@
                         bootstrap: true,
                         bootstrap_version: 5
                     },
-                    order: [[1, 'desc']],
-                    columnDefs: [
-                        { visible: false, targets: [12, 13, 14, 15] },
-                        { searchable: false, targets: 11 },
-                        { sortable: false, targets: [0,2,4,6,8,10,11]}
-                    ],
-                    responsive: true
-                })
-            }
-        );
+                order: [[1, 'desc']],
+                columnDefs: [
+                    { visible: false, targets: [12, 13, 14, 15] },
+                    { searchable: false, targets: 11 },
+                    { sortable: false, targets: [0,2,4,6,8,10,11]}
+                ],
+                responsive: true
+            })
+            
+            $('#table-manage-corps').DataTable({
+                filterDropDown:
+                    {
+                        columns: [
+                            {
+                                idx: 2
+                            }
+                        ],
+                        bootstrap: true,
+                        bootstrap_version: 5
+                    },
+                order: [[1, 'desc']],
+                responsive: true
+            })
+        });
     </script>
 {% endblock %}
 {% block extra_script %}
