@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 def check_owner_allowed(user: User, corporation_id):
     if isinstance(user, User):
-        return not user.has_perm(
+        return user.has_perm(
             "altmanager.can_request_alt_corp"
         )
     else:
