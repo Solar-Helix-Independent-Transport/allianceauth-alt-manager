@@ -111,7 +111,7 @@ def check_all_alt_corps(self, for_real=False):
 
                 logging.warning(
                     (
-                        f"Failing {s.get('corporation_name')} Sanction:{s.get('model')} "
+                        f"Failing {s.get('corporation_name')} permissions:{user_can} Sanction:{s.get('model')} "
                         f"to {target.name if target else '*Unknown*'}"
                         f" kmc={kmc} kmci={kmci} mc={mc} anm:{anm}"
                         f" owner={s.get('owner')} \n\n {msg}"
