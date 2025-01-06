@@ -1,3 +1,4 @@
+from datetime import timedelta
 import logging
 from collections import defaultdict
 
@@ -6,6 +7,8 @@ from allianceauth.eveonline.evelinks import dotlan, evewho, zkillboard
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from django.contrib.auth.models import User
 from django.db import models
+from django.utils import timezone
+
 from solo.models import SingletonModel
 
 from .managers import SanctionManager
@@ -149,13 +152,29 @@ class SanctionBase(models.Model):
             self.save()
 
     def revoke(self, user=None, message=""):
-        usr = "Admin"
+        usr = "Auth"
         if user:
             usr = user.profile.main_character.character_name
-        self.revoked_reason = f"Revoked by {usr} {message}"
-        self.revoked = True
+        self.revoked_reason = f"Revoked by {usr}"
+        if message:
+            self.revoked = f"{self.revoked} - {message}"
         self.sanctioned = False
         self.approved = False
+        self.save()
+
+    def revoke_pending(self, user=None, message=""):
+        usr = "Auth"
+        if user:
+            usr = user.profile.main_character.character_name
+        self.revoked_reason = f"Revoked by {usr} - {message}"
+        days = AltManagerConfiguration.get_solo().days_before_revoke
+        overdue = timezone.now() + timedelta(days=days)
+        self.pending_revoke = overdue
+        self.save()
+
+    def clear_revoke_pending(self):
+        self.revoked_reason = ""
+        self.pending_revoke = None
         self.save()
 
     def remove_sanction(self, user=None):
@@ -167,6 +186,7 @@ class SanctionBase(models.Model):
 
     def clear_revoke(self):
         self.revoked_reason = None
+        self.pending_revoke = None
         self.revoked = False
         if self.request.sanctioner is not None:
             self.sanctioned = True
@@ -286,7 +306,7 @@ class AltCorpRecord(SanctionBase):
             }
         }
 
-        if not self.revoked:
+        if not self.revoked and not self.pending_revoke:
             if self.approved:
                 embed["color"] = GREEN
             else:
@@ -324,7 +344,7 @@ class AltCorpRecord(SanctionBase):
                 f"[EvE Who]({evewho.character_url(actor.character_id)})\n"
             )
 
-        if not self.revoked:
+        if not self.revoked and not self.pending_revoke:
             if self.approved:
                 embed["color"] = GREEN
             else:

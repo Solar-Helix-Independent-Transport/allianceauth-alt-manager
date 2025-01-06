@@ -126,6 +126,12 @@
                             {% if corp.revoked_reason %}
                                 <figcaption class="figure-caption">{{corp.revoked_reason}}</figcaption>
                             {% endif %}
+                        {% elif corp.revoked_pending and corp.approved %}
+                            <span class="badge bg-danger">Pending Revoke</span>
+                            {% if corp.revoked_reason %}
+                                    <figcaption class="figure-caption">{{corp.revoked_reason}}</figcaption>
+                                    <figcaption class="figure-caption">Deadline: {{corp.revoked_pending}}</figcaption>
+                            {% endif %}
                         {% elif corp.approved %}
                             <span class="badge bg-success">Active</span>
                         {% elif corp.sanctioned %}
@@ -156,6 +162,8 @@
                     <td>
                         {% if corp.revoked %}
                             Revoked
+                        {% elif corp.revoked_pending %}
+                            Revoke Pending
                         {% elif corp.approved %}
                             Active
                         {% elif corp.sanctioned %}
