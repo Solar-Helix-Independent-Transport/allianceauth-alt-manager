@@ -5,4 +5,4 @@ class Command(BaseCommand):
     help = 'Check all sancitons'
 
     def handle(self, *args, **options):
-        check_all_alt_corps.delay()
+        check_all_alt_corps()
