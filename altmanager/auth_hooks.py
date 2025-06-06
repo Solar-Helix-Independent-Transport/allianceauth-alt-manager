@@ -19,10 +19,10 @@ class AltManager(MenuItemHook):
             return MenuItemHook.render(self, request)
         return ''
 
-
-@hooks.register('menu_item_hook')
-def register_menu():
-    return AltManager()
+if app_settings.ALT_MANAGER_BASIC:
+    @hooks.register('menu_item_hook')
+    def register_menu():
+        return AltManager()
 
 
 class AltClaim(MenuItemHook):
