@@ -92,34 +92,36 @@ class AltManagerConfiguration(SingletonModel):
         Returns a set of corporation IDs considered members, optionally including
         corporations from restricted corps.
         """
-        # Fetch corp ids from member corps
-        member_corp_ids = (
-            cls.get_solo().member_corps.all().values_list("corporation_id", flat=True)
+        solo = cls.get_solo()
+
+        # Fetch corp IDs directly added to member corps
+        member_corp_ids = set(
+            solo.member_corps.all().values_list("corporation_id", flat=True)
         )
 
-        # Fetch all corporations from member alliances
-        alliance_corp_ids = EveCorporationInfo.objects.filter(
-            alliance__in=cls.get_solo().member_alliances.all()
-        ).values_list("corporation_id", flat=True)
-
-        # Combine the corp lists
-        all_member_ids = member_corp_ids.union(alliance_corp_ids)
-
-        # Get IDs of restricted corps
-        restricted_ids = (
-            cls.get_solo()
-            .restricted_corps.all()
-            .values_list("corporation_id", flat=True)
+        # Fetch corp IDs belonging to member alliances
+        alliance_corp_ids = set(
+            EveCorporationInfo.objects.filter(
+                alliance__in=solo.member_alliances.all()
+            ).values_list("corporation_id", flat=True)
         )
 
-        # the logic here was originally backwards
+        # Combine both
+        all_member_ids = member_corp_ids | alliance_corp_ids
+
+        # Fetch restricted corp IDs
+        restricted_ids = set(
+            solo.restricted_corps.all().values_list("corporation_id", flat=True)
+        )
+
         if not inc_restricted:
-            # Exclude restricted corps, incase they got added by the alliance
-            all_member_ids = all_member_ids.exclude(corporation_id__in=restricted_ids)
+            # Exclude restricted corps
+            all_member_ids -= restricted_ids
         else:
             # Include restricted corps
-            all_member_ids = all_member_ids | restricted_ids
+            all_member_ids |= restricted_ids
 
+        logger.debug("Fetching member corporations: %s", all_member_ids)
         return set(all_member_ids)
 
 
