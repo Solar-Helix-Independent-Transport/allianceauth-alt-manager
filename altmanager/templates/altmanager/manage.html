@@ -82,15 +82,19 @@
                         <tr>
                             <td class="align-middle">
                                 <img src="https://images.evetech.net/corporations/{{ corp.corporation_id }}/logo" width="32px" heght="32px"/>
-                                {% if corp.alliance_id %}
-                                    <img class="ms-2" src="https://images.evetech.net/alliances/{{ corp.alliance_id }}/logo" width="32px" heght="32px"/>
+                                {% if corp.corporation.alliance %}
+                                    <img class="ms-2" src="https://images.evetech.net/alliances/{{ corp.corporation.alliance.alliance_id }}/logo" width="32px" heght="32px"/>
                                 {% endif %}
                             </td>
                             <td class="align-middle">
                                 {{ corp.corporation_name }}
-                                {% if corp.alliance_name %}
-                                    <figcaption class="figure-caption">{{corp.alliance_name}}</figcaption>
-                                {% endif %}
+                                {% if corp.corporation.alliance %}
+                                    {% if if perms.altmanager.su_access %}
+                                        <figcaption class="figure-caption"><a href="/alts/api/get_missing_alliance/{{corp.corporation.alliance.alliance_id}}">{{corp.corporation.alliance.alliance_name}}</a></figcaption>
+                                    {% else %}
+                                        <figcaption class="figure-caption">{{corp.corporation.alliance.alliance_name}}</figcaption>
+                                    {% endif %}
+                                    {% endif %}
                             </td>
                             <td class="align-middle text-center">
                                 <img src="https://images.evetech.net/characters/{{ corp.owner.character_id }}/portrait" width="32px" heght="32px"/>
