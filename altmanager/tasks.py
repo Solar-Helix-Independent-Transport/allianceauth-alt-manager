@@ -38,7 +38,7 @@ def check_all_alt_corps(self, for_real=False):
 
         if corp is None and members is None:
             # no token revoke!
-            logging.warning(
+            logger.warning(
                 (
                     f"Failing {s.get('corporation_name')} Sanction:{s.get('model')} sanction no tokens for member count {s}"
                 )
@@ -54,7 +54,7 @@ def check_all_alt_corps(self, for_real=False):
 
         target = s.get("target", False)
 
-        logging.info(f"* Checking {s.get('corporation_name')} sanction to {target.name if target else '*Unknown*'} {s}")
+        logger.info(f"* Checking {s.get('corporation_name')} sanction to {target.name if target else '*Unknown*'} {s}")
         
         anm = False
 
@@ -63,7 +63,7 @@ def check_all_alt_corps(self, for_real=False):
 
 
         if approved == True and sanctioned == True:
-            logging.info(
+            logger.info(
                 (
                     f"{s.get('corporation_name')} - approved:{approved} - "
                     f"sanctioned:{sanctioned} - revoked:{revoked}"
@@ -95,7 +95,7 @@ def check_all_alt_corps(self, for_real=False):
             )
 
             if success and user_can:
-                logging.info(
+                logger.info(
                     (
                         f"{s.get('corporation_name')} permissions:{user_can}"
                     )
@@ -109,7 +109,7 @@ def check_all_alt_corps(self, for_real=False):
                     msg.append(f"Owner missing permission to sanction.")
                 msg = "\n".join(msg)
 
-                logging.warning(
+                logger.warning(
                     (
                         f"Failing {s.get('corporation_name')} permissions:{user_can} Sanction:{s.get('model')} "
                         f"to {target.name if target else '*Unknown*'}"
