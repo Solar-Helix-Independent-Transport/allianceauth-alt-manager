@@ -82,17 +82,17 @@
                         <tr>
                             <td class="align-middle">
                                 <img src="https://images.evetech.net/corporations/{{ corp.corporation_id }}/logo" width="32px" heght="32px"/>
-                                {% if corp.corporation.alliance %}
-                                    <img class="ms-2" src="https://images.evetech.net/alliances/{{ corp.corporation.alliance.alliance_id }}/logo" width="32px" heght="32px"/>
+                                {% if corp.alliance_id %}
+                                    <img class="ms-2" src="https://images.evetech.net/alliances/{{ corp.alliance_id }}/logo" width="32px" heght="32px"/>
                                 {% endif %}
                             </td>
                             <td class="align-middle">
                                 {{ corp.corporation_name }}
-                                {% if corp.corporation.alliance %}
+                                {% if corp.alliance_id %}
                                     {% if perms.altmanager.su_access %}
-                                        <figcaption class="figure-caption"><a href="/alts/api/get_missing_alliance/{{corp.corporation.alliance.alliance_id}}">{{corp.corporation.alliance.alliance_name}}</a></figcaption>
+                                        <figcaption class="figure-caption"><a href="/alts/api/get_missing_alliance/{{corp.alliance_id}}">{{corp.alliance_name}}</a></figcaption>
                                     {% else %}
-                                        <figcaption class="figure-caption">{{corp.corporation.alliance.alliance_name}}</figcaption>
+                                        <figcaption class="figure-caption">{{corp.alliance_name}}</figcaption>
                                     {% endif %}
                                 {% endif %}
                             </td>
