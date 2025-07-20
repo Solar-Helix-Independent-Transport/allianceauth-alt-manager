@@ -89,12 +89,12 @@
                             <td class="align-middle">
                                 {{ corp.corporation_name }}
                                 {% if corp.corporation.alliance %}
-                                    {% if if perms.altmanager.su_access %}
+                                    {% if perms.altmanager.su_access %}
                                         <figcaption class="figure-caption"><a href="/alts/api/get_missing_alliance/{{corp.corporation.alliance.alliance_id}}">{{corp.corporation.alliance.alliance_name}}</a></figcaption>
                                     {% else %}
                                         <figcaption class="figure-caption">{{corp.corporation.alliance.alliance_name}}</figcaption>
                                     {% endif %}
-                                    {% endif %}
+                                {% endif %}
                             </td>
                             <td class="align-middle text-center">
                                 <img src="https://images.evetech.net/characters/{{ corp.owner.character_id }}/portrait" width="32px" heght="32px"/>
