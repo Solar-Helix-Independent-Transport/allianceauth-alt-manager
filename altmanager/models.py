@@ -1,14 +1,17 @@
-from datetime import timedelta
 import logging
 from collections import defaultdict
+from datetime import timedelta
 
 from allianceauth.authentication.models import CharacterOwnership
 from allianceauth.eveonline.evelinks import dotlan, evewho, zkillboard
-from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
+from allianceauth.eveonline.models import (
+    EveAllianceInfo,
+    EveCharacter,
+    EveCorporationInfo,
+)
 from django.contrib.auth.models import User
 from django.db import models
 from django.utils import timezone
-
 from solo.models import SingletonModel
 
 from .managers import SanctionManager
@@ -24,6 +27,7 @@ def send_discord_message(user_pk=None, channel_id=None, embed=None):
     try:
         from aadiscordbot.tasks import send_message
         from discord import Embed
+
         e = Embed.from_dict(embed)
         if user_pk:
             send_message(user_pk=user_pk, embed=e)
@@ -41,63 +45,84 @@ class AltManagerConfiguration(SingletonModel):
     )
 
     member_corps = models.ManyToManyField(
-        EveCorporationInfo,
+        EveCorporationInfo, blank=True, related_name="member_corp"
+    )
+
+    member_alliances = models.ManyToManyField(
+        EveAllianceInfo,
         blank=True,
-        related_name="member_corp"
+        related_name="member_alliance",
+        help_text="Alliances who's member corps are allowed to make requests",
     )
 
     days_before_revoke = models.IntegerField(
-        default=5,
-        help_text="How many days of grace to give before revoking approvals"
+        default=5, help_text="How many days of grace to give before revoking approvals"
     )
 
     management_channel_id = models.BigIntegerField(
-        default=0,
-        help_text="Discord Channel ID to send manager notifications to."
+        default=0, help_text="Discord Channel ID to send manager notifications to."
     )
 
     class Meta:
         verbose_name = "Alt Manager Configuration"
         permissions = (
             # Basic Alt Manager
-            ('basic_access', 'Can access alt manager module'),
-            ('restricted_corps', 'Can access restricted corps.'),
-            ('su_access', 'Can access ALL corps.'),
-
+            ("basic_access", "Can access alt manager module"),
+            ("restricted_corps", "Can access restricted corps."),
+            ("su_access", "Can access ALL corps."),
             # Alt corp requests
             # can requests
-            ('can_request_alt_corp', 'Can send alt corp requests'),
-
+            ("can_request_alt_corp", "Can send alt corp requests"),
             # Can sanction the request
-            ('can_sanction_own_corp', 'Can sanction requests from members in own corp'),
-            ('can_sanction_all', 'Can sanction all requests'),
-
+            ("can_sanction_own_corp", "Can sanction requests from members in own corp"),
+            ("can_sanction_all", "Can sanction all requests"),
             # Can action requests
-            ('can_manage_alt_corp', 'Can manage alt corp requests'),
-
+            ("can_manage_alt_corp", "Can manage alt corp requests"),
             # can see the current requests
-            ('can_view_active_requests', 'Can view all active/current alt corp owners'),
+            ("can_view_active_requests", "Can view all active/current alt corp owners"),
             # can see all requests
-            ('can_view_all_requests', 'Can view all alt corp owners'),
+            ("can_view_all_requests", "Can view all alt corp owners"),
         )
 
         default_permissions = []
 
     @classmethod
     def get_member_corporation_ids(cls, inc_restricted=False):
-        _out = cls.get_solo().member_corps.all(
-        ).values_list(
-            "corporation_id",
-            flat=True
+        """
+        Returns a set of corporation IDs considered members, optionally including
+        corporations from restricted corps.
+        """
+        solo = cls.get_solo()
+
+        # Fetch corp IDs directly added to member corps
+        member_corp_ids = set(
+            solo.member_corps.all().values_list("corporation_id", flat=True)
+        )
+
+        # Fetch corp IDs belonging to member alliances
+        alliance_corp_ids = set(
+            EveCorporationInfo.objects.filter(
+                alliance__in=solo.member_alliances.all()
+            ).values_list("corporation_id", flat=True)
+        )
+
+        # Combine both
+        all_member_ids = member_corp_ids | alliance_corp_ids
+
+        # Fetch restricted corp IDs
+        restricted_ids = set(
+            solo.restricted_corps.all().values_list("corporation_id", flat=True)
         )
 
         if not inc_restricted:
-            _out = _out | cls.get_solo().restricted_corps.all(
-            ).values_list(
-                "corporation_id",
-                flat=True
-            )
-        return set(list(_out))
+            # Exclude restricted corps
+            all_member_ids -= restricted_ids
+        else:
+            # Include restricted corps
+            all_member_ids |= restricted_ids
+
+        logger.debug("Fetching member corporations: %s", all_member_ids)
+        return set(all_member_ids)
 
 
 class AltCorpTarget(models.Model):
@@ -108,7 +133,7 @@ class AltCorpTarget(models.Model):
         default="None",
         null=True,
         blank=True,
-        help_text="Discord Embed formatted text to send to member on approval"
+        help_text="Discord Embed formatted text to send to member on approval",
     )
 
     def __str__(self):
@@ -128,7 +153,7 @@ class SanctionBase(models.Model):
         blank=True,
         null=True,
         default=None,
-        help_text="The revoke/pending revoke reason"
+        help_text="The revoke/pending revoke reason",
     )
 
     def approve(self, approver=None, sanctioner=None):
@@ -208,21 +233,21 @@ class HistoryBase(models.Model):
         null=True,
         default=None,
         help_text="The owner character model",
-        related_name="+"
+        related_name="+",
     )
     owner_character_name = models.CharField(
         max_length=250,
         blank=True,
         null=True,
         default=None,
-        help_text="The owner character name at time of claim"
+        help_text="The owner character name at time of claim",
     )
     owner_corporation_name = models.CharField(
         max_length=250,
         blank=True,
         null=True,
         default=None,
-        help_text="The owners corporation name at time of claim"
+        help_text="The owners corporation name at time of claim",
     )
     sanctioner = models.ForeignKey(
         EveCharacter,
@@ -231,21 +256,21 @@ class HistoryBase(models.Model):
         null=True,
         default=None,
         help_text="The owner character model",
-        related_name="+"
+        related_name="+",
     )
     sanctioner_character_name = models.CharField(
         max_length=250,
         blank=True,
         null=True,
         default=None,
-        help_text="The sanctioning character name at time of sanction"
+        help_text="The sanctioning character name at time of sanction",
     )
     sanctioner_corporation_name = models.CharField(
         max_length=250,
         blank=True,
         null=True,
         default=None,
-        help_text="The sanctioning characters corporation name at time of sanction"
+        help_text="The sanctioning characters corporation name at time of sanction",
     )
     approver = models.ForeignKey(
         EveCharacter,
@@ -254,21 +279,21 @@ class HistoryBase(models.Model):
         null=True,
         default=None,
         help_text="The approver model",
-        related_name="+"
+        related_name="+",
     )
     approver_character_name = models.CharField(
         max_length=250,
         blank=True,
         null=True,
         default=None,
-        help_text="The approving character name at time of sanction"
+        help_text="The approving character name at time of sanction",
     )
     approver_corporation_name = models.CharField(
         max_length=250,
         blank=True,
         null=True,
         default=None,
-        help_text="The approving characters corporation name at time of sanction"
+        help_text="The approving characters corporation name at time of sanction",
     )
 
     class Meta:
@@ -282,7 +307,7 @@ class AltCorpRecord(SanctionBase):
         default=None,
         blank=True,
         null=True,
-        help_text="Member count as detected via member endpoint."
+        help_text="Member count as detected via member endpoint.",
     )
 
     def still_valid(self):
@@ -303,7 +328,7 @@ class AltCorpRecord(SanctionBase):
                     "https://images.evetech.net/corporations/"
                     f"{self.request.corporation.corporation_id}/logo"
                 )
-            }
+            },
         }
 
         if not self.revoked and not self.pending_revoke:
@@ -314,7 +339,9 @@ class AltCorpRecord(SanctionBase):
         else:
             embed["color"] = RED
 
-        send_discord_message(user_pk=self.request.owner.character_ownership.user_id, embed=embed)
+        send_discord_message(
+            user_pk=self.request.owner.character_ownership.user_id, embed=embed
+        )
 
     def notify_managers(self, message, actor: EveCharacter = None):
 
@@ -376,14 +403,10 @@ class AltCorpHistory(HistoryBase):
         null=True,
         blank=True,
         default=True,
-        related_name="request"
+        related_name="request",
     )
     target = models.ForeignKey(
-        AltCorpTarget,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        default=None
+        AltCorpTarget, on_delete=models.SET_NULL, null=True, blank=True, default=None
     )
     corporation = models.ForeignKey(
         EveCorporationInfo,
@@ -392,9 +415,7 @@ class AltCorpHistory(HistoryBase):
         null=True,
         default=None,
     )
-    corporation_name = models.CharField(
-        max_length=250
-    )
+    corporation_name = models.CharField(max_length=250)
 
     def __str__(self):
         try:
@@ -439,7 +460,9 @@ class AltRecord(SanctionBase):
         else:
             embed["color"] = RED
 
-        send_discord_message(user_pk=self.request.owner.character_ownership.user_id, embed=embed)
+        send_discord_message(
+            user_pk=self.request.owner.character_ownership.user_id, embed=embed
+        )
 
     def notify_managers(self, message, actor: EveCharacter = None):
 
@@ -494,10 +517,7 @@ class AltRecord(SanctionBase):
         default_permissions = []
 
 
-EntityChoices = (
-    (0, "Alliance"),
-    (1, "Character")
-)
+EntityChoices = ((0, "Alliance"), (1, "Character"))
 
 
 class AltHistory(HistoryBase):
@@ -508,19 +528,14 @@ class AltHistory(HistoryBase):
         null=True,
         blank=True,
         default=True,
-        related_name="request"
+        related_name="request",
     )
 
     entity_id = models.BigIntegerField()
 
-    entity_name = models.CharField(
-        max_length=100,
-        choices=EntityChoices
-    )
+    entity_name = models.CharField(max_length=100, choices=EntityChoices)
 
-    entity_type = models.CharField(
-        max_length=250
-    )
+    entity_type = models.CharField(max_length=250)
 
     def __str__(self):
         try:
@@ -556,21 +571,24 @@ class MainInMemberCorpFilter(FilterBase):
 
     def process_filter(self, user: User):
         try:
-            return self.audit_filter([user])[user.id]['check']
+            return self.audit_filter([user])[user.id]["check"]
         except Exception as e:
             logger.error(e, exc_info=1)
             return False
 
     def audit_filter(self, users):
-        co = CharacterOwnership.objects.filter(
-            user__in=users,
-            user__profile__main_character__corporation_id__in=(
-                AltManagerConfiguration.get_member_corporation_ids(inc_restricted=True)
+        co = (
+            CharacterOwnership.objects.filter(
+                user__in=users,
+                user__profile__main_character__corporation_id__in=(
+                    AltManagerConfiguration.get_member_corporation_ids(
+                        inc_restricted=True
+                    )
+                ),
             )
-        ).values_list(
-            "user_id",
-            flat=True
-        ).distinct()
+            .values_list("user_id", flat=True)
+            .distinct()
+        )
 
         failure = self.swap_logic
 
