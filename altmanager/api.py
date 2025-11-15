@@ -28,8 +28,7 @@ api = NinjaAPI(
     title="Alt Manager API",
     version="0.0.2",
     urls_namespace='altmanager:api',
-    auth=django_auth,
-    csrf=True
+    auth=django_auth
 )
 # openapi_url=settings.DEBUG and "/openapi.json" or "")
 
