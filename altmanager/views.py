@@ -21,7 +21,7 @@ def add_corp(request, token, corp_id=None):
     char = EveCharacter.objects.get_character_by_id(token.character_id)
     # This is more accurate and tests teh token at the same time.
     # TODO try catch and test for errors
-    members = esi.client.Corporation.get_corporations_corporation_id_members(
+    members = esi.client.Corporation.GetCorporationsCorporationIdMembers(
         corporation_id=char.corporation_id,
         token=token
     ).results()

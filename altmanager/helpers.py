@@ -73,15 +73,15 @@ def get_known_corporation_members_from_members(corporation_id: int) -> QuerySet[
 
 
 def get_and_update_member_list(entity_id, user=None):
-    corporation_detail = esi.client.Corporation.get_corporations_corporation_id(
+    corporation_detail = esi.client.Corporation.GetCorporationsCorporationId(
         corporation_id=entity_id
-    ).results()
+    ).result()
 
-    if corporation_detail.get("alliance_id"):
+    if getattr(corporation_detail, "alliance_id", None):
         try:
-            EveAllianceInfo.objects.get(alliance_id=corporation_detail.get("alliance_id"))
+            EveAllianceInfo.objects.get(alliance_id=corporation_detail.alliance_id)
         except EveAllianceInfo.DoesNotExist:
-            EveAllianceInfo.objects.create_alliance(corporation_detail.get("alliance_id"))
+            EveAllianceInfo.objects.create_alliance(corporation_detail.alliance_id)
             EveCorporationInfo.objects.get(corporation_id=entity_id).update_corporation()
 
     char_ids = EveCharacter.objects.filter(
@@ -104,7 +104,7 @@ def get_and_update_member_list(entity_id, user=None):
             token.character_id
         )
 
-        members = esi.client.Corporation.get_corporations_corporation_id_members(
+        members = esi.client.Corporation.GetCorporationsCorporationIdMembers(
             corporation_id=entity_id,
             token=token
         ).results()

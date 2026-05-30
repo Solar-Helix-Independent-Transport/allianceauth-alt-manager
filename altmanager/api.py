@@ -90,7 +90,7 @@ def get_stats_for_corp(request, corp_id: int):
             corp_id=corp_id,
             scopes=["esi-corporations.read_corporation_membership.v1"])
         char = EveCharacter.objects.get(character_id=token.character_id)
-        data = providers.esi.client.Corporation.get_corporations_corporation_id_members(
+        data = providers.esi.client.Corporation.GetCorporationsCorporationIdMembers(
             corporation_id=corp_id, token=token).result()
         member_count = len(data)
         _knowns = EveCharacter.objects.filter(character_id__in=data,
@@ -101,7 +101,7 @@ def get_stats_for_corp(request, corp_id: int):
         out = list(set(data) - set(known_ids))
         new_names = []
         if len(out):
-            new_names = providers.esi.client.Universe.post_universe_names(
+            new_names = providers.esi.client.Universe.PostUniverseNames(
                 ids=out
             ).result()
         return 200, {"corporation": char.corporation_name,
@@ -158,7 +158,7 @@ def get_missing(request, corp_id: int, check_members: bool = False):
         if not token:
             return 404, f"No Token found, please add a new corporate token for this corporation {corp_id}!"
         
-        data = providers.esi.client.Corporation.get_corporations_corporation_id_members(
+        data = providers.esi.client.Corporation.GetCorporationsCorporationIdMembers(
             corporation_id=corp_id, token=token
         ).result()
 
@@ -175,7 +175,7 @@ def get_missing(request, corp_id: int, check_members: bool = False):
         new_names = []
 
         if len(out):
-            new_names = providers.esi.client.Universe.post_universe_names(
+            new_names = providers.esi.client.Universe.PostUniverseNames(
                 ids=out
             ).result()
 
@@ -251,7 +251,7 @@ def get_missing_alliance_members(request, alliance_id: int):
         "missing": []
     }
 
-    corps = providers.esi.client.Alliance.get_alliances_alliance_id_corporations(
+    corps = providers.esi.client.Alliance.GetAlliancesAllianceIdCorporations(
         alliance_id=alliance_id
     ).result()
 

@@ -44,14 +44,15 @@ def get_corp_token(corp_id, scopes, req_roles=None):
     if req_roles:
         for token in tokens:
             try:
-                roles = esi.client.Character.get_characters_character_id_roles(
+                roles = esi.client.Character.GetCharactersCharacterIdRoles(
                     character_id=token.character_id,
                     token=token
                 ).result()
                 has_roles = False
-                for role in roles.get('roles', []):
-                    if role in req_roles:
-                        has_roles = True
+                if roles.roles:
+                    for role in roles.roles:
+                        if role in req_roles:
+                            has_roles = True
 
                 if has_roles:
                     return token
