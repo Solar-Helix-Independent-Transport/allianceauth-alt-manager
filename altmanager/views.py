@@ -23,7 +23,7 @@ def add_corp(request, token, corp_id=None):
     # TODO try catch and test for errors
     members = esi.client.Corporation.get_corporations_corporation_id_members(
         corporation_id=char.corporation_id,
-        token=token.valid_access_token()
+        token=token
     ).results()
     corp, created = EveCorporationInfo.objects.update_or_create(
         corporation_id=char.corporation_id,

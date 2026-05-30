@@ -1,14 +1,28 @@
 import logging
 
 from allianceauth.eveonline.models import EveCharacter
-from esi.clients import EsiClientProvider
 from esi.errors import TokenError
 from esi.models import Token
+from esi.openapi_clients import ESIClientProvider
+
+from altmanager import __version__
 
 logger = logging.getLogger(__name__)
 
 
-esi = EsiClientProvider()
+esi = ESIClientProvider(
+    compatibility_date="2026-05-19",
+    ua_appname="AllianceauthAltManager",
+    ua_version=__version__,
+    ua_url="https://github.com/Solar-Helix-Independent-Transport/allianceauth-alt-manager",
+    operations=[
+        "GetAlliancesAllianceIdCorporations",
+        "GetCharactersCharacterIdRoles",
+        "GetCorporationsCorporationId",
+        "GetCorporationsCorporationIdMembers",
+        "PostUniverseNames",
+    ],
+)
 
 
 def get_corp_token(corp_id, scopes, req_roles=None):
@@ -32,7 +46,7 @@ def get_corp_token(corp_id, scopes, req_roles=None):
             try:
                 roles = esi.client.Character.get_characters_character_id_roles(
                     character_id=token.character_id,
-                    token=token.valid_access_token()
+                    token=token
                 ).result()
                 has_roles = False
                 for role in roles.get('roles', []):

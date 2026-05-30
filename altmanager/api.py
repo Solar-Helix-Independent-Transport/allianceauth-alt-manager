@@ -91,7 +91,7 @@ def get_stats_for_corp(request, corp_id: int):
             scopes=["esi-corporations.read_corporation_membership.v1"])
         char = EveCharacter.objects.get(character_id=token.character_id)
         data = providers.esi.client.Corporation.get_corporations_corporation_id_members(
-            corporation_id=corp_id, token=token.valid_access_token()).result()
+            corporation_id=corp_id, token=token).result()
         member_count = len(data)
         _knowns = EveCharacter.objects.filter(character_id__in=data,
                                               character_ownership__isnull=False
@@ -159,7 +159,7 @@ def get_missing(request, corp_id: int, check_members: bool = False):
             return 404, f"No Token found, please add a new corporate token for this corporation {corp_id}!"
         
         data = providers.esi.client.Corporation.get_corporations_corporation_id_members(
-            corporation_id=corp_id, token=token.valid_access_token()
+            corporation_id=corp_id, token=token
         ).result()
 
         member_count = len(data)

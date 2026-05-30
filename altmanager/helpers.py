@@ -106,7 +106,7 @@ def get_and_update_member_list(entity_id, user=None):
 
         members = esi.client.Corporation.get_corporations_corporation_id_members(
             corporation_id=entity_id,
-            token=token.valid_access_token()
+            token=token
         ).results()
 
         corp, created = EveCorporationInfo.objects.update_or_create(
