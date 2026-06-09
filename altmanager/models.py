@@ -313,8 +313,12 @@ class AltCorpRecord(SanctionBase):
                 embed["color"] = BLUE
         else:
             embed["color"] = RED
-
-        send_discord_message(user_pk=self.request.owner.character_ownership.user_id, embed=embed)
+            
+        try:
+            send_discord_message(user_pk=self.request.owner.character_ownership.user_id, embed=embed)
+        except Exception as e:
+            logger.error("Failed to send owner notification for alt corp record.")
+            logger.error(e)
 
     def notify_managers(self, message, actor: EveCharacter = None):
 
