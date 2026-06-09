@@ -91,7 +91,7 @@ def get_stats_for_corp(request, corp_id: int):
             scopes=["esi-corporations.read_corporation_membership.v1"])
         char = EveCharacter.objects.get(character_id=token.character_id)
         data = providers.esi.client.Corporation.GetCorporationsCorporationIdMembers(
-            corporation_id=corp_id, token=token).result()
+            corporation_id=corp_id, token=token).result(use_etag=False)
         member_count = len(data)
         _knowns = EveCharacter.objects.filter(character_id__in=data,
                                               character_ownership__isnull=False
@@ -102,7 +102,7 @@ def get_stats_for_corp(request, corp_id: int):
         new_names = []
         if len(out):
             new_names = providers.esi.client.Universe.PostUniverseNames(
-                ids=out
+                body=out
             ).result()
         return 200, {"corporation": char.corporation_name,
                      # "character":{character_char,
@@ -160,7 +160,7 @@ def get_missing(request, corp_id: int, check_members: bool = False):
         
         data = providers.esi.client.Corporation.GetCorporationsCorporationIdMembers(
             corporation_id=corp_id, token=token
-        ).result()
+        ).result(use_etag=False)
 
         member_count = len(data)
 
@@ -176,7 +176,7 @@ def get_missing(request, corp_id: int, check_members: bool = False):
 
         if len(out):
             new_names = providers.esi.client.Universe.PostUniverseNames(
-                ids=out
+                body=out
             ).result()
 
         _c = EveCorporationInfo.objects.get(corporation_id=corp_id)
@@ -253,7 +253,7 @@ def get_missing_alliance_members(request, alliance_id: int):
 
     corps = providers.esi.client.Alliance.GetAlliancesAllianceIdCorporations(
         alliance_id=alliance_id
-    ).result()
+    ).result(use_etag=False)
 
     db_corps = EveCorporationInfo.objects.filter(
         alliance_id=alliance_id

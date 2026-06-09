@@ -53,7 +53,7 @@ def get_corp_token(corp_id, scopes, req_roles=None):
                     for role in roles.roles:
                         if role in req_roles:
                             has_roles = True
-
+                            break
                 if has_roles:
                     return token
                 else:
