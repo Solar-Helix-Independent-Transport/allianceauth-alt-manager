@@ -75,7 +75,9 @@ def get_known_corporation_members_from_members(corporation_id: int) -> QuerySet[
 def get_and_update_member_list(entity_id, user=None):
     corporation_detail = esi.client.Corporation.GetCorporationsCorporationId(
         corporation_id=entity_id
-    ).result()
+    ).result(
+        use_etag=False
+    )
 
     if getattr(corporation_detail, "alliance_id", None):
         try:
@@ -107,7 +109,9 @@ def get_and_update_member_list(entity_id, user=None):
         members = esi.client.Corporation.GetCorporationsCorporationIdMembers(
             corporation_id=entity_id,
             token=token
-        ).results()
+        ).results(
+            use_etag=False
+        )
 
         corp, created = EveCorporationInfo.objects.update_or_create(
             corporation_id=entity_id,
