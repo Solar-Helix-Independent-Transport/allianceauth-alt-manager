@@ -260,7 +260,7 @@ def get_missing_alliance_members(request, alliance_id: int):
         alliance_id=alliance_id
     ).exclude(
         corporation_id__in=corps
-    ).values_list("corporation_id")
+    ).values_list("corporation_id", flat=True)
 
     def process_corp(corp_id, esi=False):
         try:
