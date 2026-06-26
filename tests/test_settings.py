@@ -10,7 +10,6 @@ CELERY_ALWAYS_EAGER = True  # Forces celery to run locally for testing
 
 INSTALLED_APPS += [  # noqa: F405
     'altmanager',
-    'solo'
 ]
 
 ROOT_URLCONF = 'tests.urls'
@@ -26,6 +25,16 @@ PASSWORD_HASHERS = [
     'django.contrib.auth.hashers.MD5PasswordHasher',
 ]
 
+# Use simple storage in tests — no manifest / collectstatic required
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
+
 # LOGGING = None  # Comment out to enable logging for debugging
 
 # Register an application at https://developers.eveonline.com for Authentication
@@ -36,6 +45,17 @@ PASSWORD_HASHERS = [
 ESI_SSO_CLIENT_ID = '123'
 ESI_SSO_CLIENT_SECRET = '123'
 ESI_SSO_CALLBACK_URL = '123'
+ESI_USER_CONTACT_EMAIL = 'test@example.com'
+
+SITE_URL = 'http://localhost'
+CSRF_TRUSTED_ORIGINS = ['http://localhost']
+
+SILENCED_SYSTEM_CHECKS = [
+    'allianceauth.checks.B006',
+    'allianceauth.checks.B008',
+    'allianceauth.checks.B010',
+    'esi.E003',
+]
 
 CACHES = {
     "default": {

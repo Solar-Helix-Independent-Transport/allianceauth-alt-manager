@@ -73,18 +73,17 @@ def get_stats_for_corp(request, corp_id: int):
             f"Access Denied to {request.user} for {corp_id} No Perms")
         return 403, "Access Denied No Perms"
 
+    if corp_id == 0:
+        return 200, {"corporation": " ",
+                     "data": False,
+                     "unknowns": 0,
+                     "knowns": 0}
+
     if not request.user.is_superuser:
         if corp_id not in get_corps_for_user(request.user):
             logger.warning(
                 f"Access Denied to {request.user} for {corp_id} Not visible")
             return 403, "Access Denied Not Visible"
-
-    if corp_id == 0:
-        return 200, {"corporation": " ",
-                     # "character":{character_char,
-                     "data": False,
-                     "unknowns": 0,
-                     "knowns": 0}
     try:
         token = providers.get_corp_token(
             corp_id=corp_id,
@@ -129,6 +128,14 @@ def get_missing(request, corp_id: int, check_members: bool = False):
             f"Access Denied to {request.user} for c:{corp_id} No Perms")
         return 403, "Access Denied No Perms"
 
+    if corp_id == 0:
+        return 200, {
+            "corporation": None,
+            "characters": [],
+            "known_non_members": [],
+            "unknowns": [],
+        }
+
     if not request.user.is_superuser:
         mbr = corp_id not in AltManagerConfiguration.get_member_corporation_ids()
         usr = corp_id in get_corps_for_user(request.user)
@@ -139,15 +146,6 @@ def get_missing(request, corp_id: int, check_members: bool = False):
             logger.warning(
                 f"Access Denied to {request.user} for c:{corp_id} Not visible")
             return 403, "Access Denied Not Visible"
-
-    if corp_id == 0:
-        return 200, {
-            "corporation": " ",
-            # "character":{character_char,
-            "characters": False,
-            "unknowns": -1,
-            "knowns": 0
-        }
 
     try:
         token = providers.get_corp_token(
@@ -218,8 +216,12 @@ def get_missing(request, corp_id: int, check_members: bool = False):
                 )
 
         return 200, {
-            "corporation": _c,
-            # "character":{character_char,
+            "corporation": {
+                "corporation_id": _c.corporation_id,
+                "corporation_name": _c.corporation_name,
+                "corporation_ticker": _c.corporation_ticker,
+                "member_count": _c.member_count,
+            },
             "characters": new_names,
             "known_non_members": _know_unknowns,
             "unknowns": member_count - len(known_ids),
