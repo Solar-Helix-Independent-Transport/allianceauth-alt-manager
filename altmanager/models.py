@@ -449,7 +449,7 @@ class AltRecord(SanctionBase):
     def notify_managers(self, message, actor: EveCharacter = None):
 
         embed = {
-            "title": f"Alt Management Update - {self.request.corporation.corporation_name}",
+            "title": f"Alt Management Update - {self.request.entity_name}",
             "description": (
                 f"{message}"
                 # f"[DotLan]({dotlan.corporation_url(self.request.corporation_name)})\n"
