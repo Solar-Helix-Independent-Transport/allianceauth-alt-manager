@@ -51,6 +51,7 @@ def check_all_alt_corps(self, for_real=False):
                 elif overdue >= sanc.pending_revoke:
                     if for_real:
                         sanc.revoke(message="No Token Avaialble for Sanctioning.")
+            continue
 
         target = s.get("target", False)
 

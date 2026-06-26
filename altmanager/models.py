@@ -119,7 +119,7 @@ class AltCorpTarget(models.Model):
 
 
 class SanctionBase(models.Model):
-    request_date = models.DateTimeField(auto_created=True)
+    request_date = models.DateTimeField(default=timezone.now)
     sanctioned = models.BooleanField(default=False)
     approved = models.BooleanField(default=False)
     pending_revoke = models.DateTimeField(default=None, blank=True, null=True)
@@ -201,7 +201,7 @@ class SanctionBase(models.Model):
 
 
 class HistoryBase(models.Model):
-    request_date = models.DateTimeField(auto_created=True)
+    request_date = models.DateTimeField(default=timezone.now)
 
     owner = models.ForeignKey(
         EveCharacter,
