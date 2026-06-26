@@ -111,7 +111,7 @@ def get_stats_for_corp(request, corp_id: int):
                      "knowns": len(known_ids)}
     except Exception as e:
         logger.exception(e)
-        return 500, "Error from ESI {e}"
+        return 500, f"Error from ESI {e}"
 
 
 @api.get(
@@ -335,7 +335,7 @@ def get_missing_alliance_members(request, alliance_id: int):
     for c in db_corps:
         process_corp(c, esi=False)
 
-    return output
+    return 200, output
 
 
 @api.get(

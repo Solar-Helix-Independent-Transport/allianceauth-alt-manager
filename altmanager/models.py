@@ -84,14 +84,14 @@ class AltManagerConfiguration(SingletonModel):
         default_permissions = []
 
     @classmethod
-    def get_member_corporation_ids(cls, inc_restricted=False):
+    def get_member_corporation_ids(cls, exc_restricted=False):
         _out = cls.get_solo().member_corps.all(
         ).values_list(
             "corporation_id",
             flat=True
         )
 
-        if not inc_restricted:
+        if not exc_restricted:
             _out = _out | cls.get_solo().restricted_corps.all(
             ).values_list(
                 "corporation_id",
@@ -575,7 +575,7 @@ class MainInMemberCorpFilter(FilterBase):
         co = CharacterOwnership.objects.filter(
             user__in=users,
             user__profile__main_character__corporation_id__in=(
-                AltManagerConfiguration.get_member_corporation_ids(inc_restricted=True)
+                AltManagerConfiguration.get_member_corporation_ids(exc_restricted=True)
             )
         ).values_list(
             "user_id",
