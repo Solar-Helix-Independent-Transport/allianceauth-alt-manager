@@ -125,7 +125,7 @@ def get_and_update_member_list(entity_id, user=None):
         return corp, members
 
     else:
-        return False, False
+        return None, None
 
 
 def get_sactionable_actions(user:User = False):
