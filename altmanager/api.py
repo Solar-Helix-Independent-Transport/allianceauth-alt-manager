@@ -384,8 +384,6 @@ def get_sanctionable_corps(request, *args):
     except IndexError:
         tokens = Token.objects.none()
 
-    logger.warning(tokens)
-
     members = AltManagerConfiguration.get_member_corporation_ids()
 
     _chars = list(
@@ -401,18 +399,12 @@ def get_sanctionable_corps(request, *args):
         character_id__in=_chars
     )
 
-    logger.warning(f"char {characters}")
-
     sanctions = AltCorpRecord.objects.filter(
         request__owner__in=characters
     )
 
-    logger.warning(f"alts {sanctions}")
-
     for _s in sanctions:
         _c = _s.request.corporation
-
-        logger.warning(sanctions)
 
         known_members = get_known_corporation_members(
             _c.corporation_id
@@ -443,8 +435,6 @@ def get_sanctionable_corps(request, *args):
             "known_members_in_member_corps": known_members_in_member_corps,
         }
 
-    #  logger.warning(f"req {output}")
-
     corporations = EveCorporationInfo.objects.filter(
         corporation_id__in=characters.values_list("corporation_id")
     )
@@ -453,7 +443,6 @@ def get_sanctionable_corps(request, *args):
         if _c.corporation_id > 2000000:
             if _c.corporation_id not in members:
                 if _c.corporation_id not in output:
-                    logger.warning(_c)
                     _a = _c.alliance
                     known_members = get_known_corporation_members(
                         _c.corporation_id
