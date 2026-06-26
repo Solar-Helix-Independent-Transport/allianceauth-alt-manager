@@ -501,8 +501,8 @@ class AltRecord(SanctionBase):
 
 
 EntityChoices = (
-    (0, "Alliance"),
-    (1, "Character")
+    ("Alliance", "Alliance"),
+    ("Character", "Character"),
 )
 
 
