@@ -380,7 +380,7 @@ class AltCorpHistory(HistoryBase):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        default=True,
+        default=None,
         related_name="request"
     )
     target = models.ForeignKey(
@@ -512,7 +512,7 @@ class AltHistory(HistoryBase):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        default=True,
+        default=None,
         related_name="request"
     )
 
