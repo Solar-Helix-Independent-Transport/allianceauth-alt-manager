@@ -44,5 +44,5 @@ class Sanction(Corporation):
     approved: Optional[bool] = False
     sanctioned: Optional[bool] = False
     revoked: Optional[bool] = False
-    revoked_text: Optional[str] = None
+    revoked_reason: Optional[str] = None
     revoked_pending: Optional[datetime] = None
