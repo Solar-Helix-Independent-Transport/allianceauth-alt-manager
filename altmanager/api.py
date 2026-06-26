@@ -263,7 +263,7 @@ def get_missing_alliance_members(request, alliance_id: int):
 
     def process_corp(corp_id, esi=False):
         try:
-            _code, corp_data = get_missing(request, corp_id=c)
+            _code, corp_data = get_missing(request, corp_id=corp_id)
             if _code == 200:
                 _m = corp_data["characters"]
                 for ch in _m:
@@ -271,7 +271,7 @@ def get_missing_alliance_members(request, alliance_id: int):
                         {
                             "id": ch['id'],
                             "name": ch['name'],
-                            "corp_id": c,
+                            "corp_id": corp_id,
                             "corp_name": corp_data["corporation"].corporation_name
                         }
                     )
@@ -281,7 +281,7 @@ def get_missing_alliance_members(request, alliance_id: int):
                         {
                             "id": ch['id'],
                             "name": ch['name'],
-                            "corp_id": c,
+                            "corp_id": corp_id,
                             "corp_name": corp_data["corporation"].corporation_name,
                             "main_id": ch['main_id'],
                             "main_name": ch['main_name'],
@@ -295,7 +295,7 @@ def get_missing_alliance_members(request, alliance_id: int):
                 del corp_data["characters"]
                 output["corporations"].append({
                     "corporation": {
-                        "corporation_id": c,
+                        "corporation_id": corp_id,
                         "corporation_name": corp_data["corporation"].corporation_name
                     },
                     "unknowns": corp_data["unknowns"],
@@ -304,7 +304,7 @@ def get_missing_alliance_members(request, alliance_id: int):
                     "esi_alliance": esi
                 })
             else:
-                _c = EveCorporationInfo.objects.get(corporation_id=c)
+                _c = EveCorporationInfo.objects.get(corporation_id=corp_id)
                 output["corporations"].append({
                     "corporation": {
                         "corporation_id": _c.corporation_id,
