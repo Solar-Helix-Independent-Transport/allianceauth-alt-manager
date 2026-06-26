@@ -248,7 +248,8 @@ def get_missing_alliance_members(request, alliance_id: int):
 
     output = {
         "corporations": [],
-        "missing": []
+        "missing": [],
+        "known_non_members": []
     }
 
     corps = providers.esi.client.Alliance.GetAlliancesAllianceIdCorporations(
