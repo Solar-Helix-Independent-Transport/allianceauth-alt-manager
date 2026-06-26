@@ -7,8 +7,6 @@ from altmanager import helpers, models
 from celery import shared_task
 from django.utils import timezone
 
-TZ_STRING = "%Y-%m-%dT%H:%M:%SZ"
-
 logger = logging.getLogger(__name__)
 
 def check_owner_allowed(user: User, corporation_id):
@@ -47,10 +45,10 @@ def check_all_alt_corps(self, for_real=False):
                 sanc = s.get('model')
                 if not sanc.pending_revoke:
                     if for_real:
-                        sanc.revoke_pending(message="No Token Avaialble for Sanctioning.")
+                        sanc.revoke_pending(message="No Token Available for Sanctioning.")
                 elif overdue >= sanc.pending_revoke:
                     if for_real:
-                        sanc.revoke(message="No Token Avaialble for Sanctioning.")
+                        sanc.revoke(message="No Token Available for Sanctioning.")
             continue
 
         target = s.get("target", False)
