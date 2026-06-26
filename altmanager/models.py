@@ -157,7 +157,8 @@ class SanctionBase(models.Model):
             usr = user.profile.main_character.character_name
         self.revoked_reason = f"Revoked by {usr}"
         if message:
-            self.revoked = f"{self.revoked} - {message}"
+            self.revoked_reason = f"{self.revoked_reason} - {message}"
+        self.revoked = True
         self.sanctioned = False
         self.approved = False
         self.save()
