@@ -109,7 +109,7 @@ def get_and_update_member_list(entity_id, user=None):
         members = esi.client.Corporation.GetCorporationsCorporationIdMembers(
             corporation_id=entity_id,
             token=token
-        ).results(
+        ).result(
             use_etag=False
         )
 
