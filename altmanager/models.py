@@ -180,6 +180,7 @@ class SanctionBase(models.Model):
 
     def remove_sanction(self, user=None):
         self.sanctioned = False
+        self.approved = False
         self.request.sanctioner = None
         self.request.approver = None
         self.save()
