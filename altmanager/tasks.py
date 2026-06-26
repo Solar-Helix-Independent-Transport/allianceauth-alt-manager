@@ -86,7 +86,7 @@ def check_all_alt_corps(self, for_real=False):
             owner = None
             try:
                 owner = s.get('owner').character_ownership.user
-            except:
+            except Exception:
                 pass
 
             user_can = check_owner_allowed(
