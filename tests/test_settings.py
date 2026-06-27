@@ -42,6 +42,8 @@ STORAGES = {
 # to https://example.com/sso/callback substituting your domain for example.com
 # Logging in to auth requires the publicData scope (can be overridden through the
 # LOGIN_TOKEN_SCOPES setting). Other apps may require more (see their docs).
+ALT_MANAGER_BASIC = True  # enables the conditional menu hook in auth_hooks.py
+
 ESI_SSO_CLIENT_ID = '123'
 ESI_SSO_CLIENT_SECRET = '123'
 ESI_SSO_CALLBACK_URL = '123'

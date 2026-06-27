@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 from allianceauth.tests.auth_utils import AuthUtils
 from django.utils import timezone
 
-from altmanager.tasks import check_alt_corp, check_owner_allowed
+from altmanager.tasks import check_all_alt_corps, check_alt_corp, check_owner_allowed
 
 from .base import AltManagerTestBase
 
@@ -210,3 +210,189 @@ class CheckAltCorpTaskTest(AltManagerTestBase):
         # cleanup
         self.target.allow_non_members = False
         self.target.save()
+
+    # --- No-token early-return branches (lines 50-57) ---
+
+    def test_no_token_already_revoked_returns_immediately(self, mock_esi, mock_discord):
+        # sanc.revoked=True → line 50 condition False → 50->57 branch (skip straight to return)
+        record = self.make_sanction(approved=True, sanctioned=True, revoked=True)
+        with patch(
+            "altmanager.tasks.helpers.get_and_update_member_list",
+            return_value=(None, None),
+        ):
+            check_alt_corp(record.pk, for_real=True)
+        record.refresh_from_db()
+        # revoked stays True, pending_revoke unchanged (None)
+        self.assertTrue(record.revoked)
+        self.assertIsNone(record.pending_revoke)
+
+    def test_no_token_pending_revoke_not_overdue_skips(self, mock_esi, mock_discord):
+        # pending_revoke is in the future → line 54 condition False → 54->57 branch
+        record = self.make_sanction(approved=True, sanctioned=True)
+        record.pending_revoke = timezone.now() + timezone.timedelta(days=7)
+        record.save()
+        with patch(
+            "altmanager.tasks.helpers.get_and_update_member_list",
+            return_value=(None, None),
+        ):
+            check_alt_corp(record.pk, for_real=True)
+        record.refresh_from_db()
+        # pending_revoke is still in future, not revoked
+        self.assertFalse(record.revoked)
+
+    def test_no_token_overdue_but_not_for_real_skips(self, mock_esi, mock_discord):
+        # pending_revoke overdue but for_real=False → line 55 condition False → 55->57 branch
+        record = self.make_sanction(approved=True, sanctioned=True)
+        record.pending_revoke = timezone.now() - timezone.timedelta(days=1)
+        record.save()
+        with patch(
+            "altmanager.tasks.helpers.get_and_update_member_list",
+            return_value=(None, None),
+        ):
+            check_alt_corp(record.pk, for_real=False)
+        record.refresh_from_db()
+        self.assertFalse(record.revoked)
+
+    # --- Failure path branches (lines 95-119) ---
+
+    def test_success_false_user_can_true_skips_user_can_message(self, mock_esi, mock_discord):
+        # success=False, user_can=True → line 98 condition False → 98->100 branch
+        AuthUtils.add_permission_to_user_by_name("altmanager.can_request_alt_corp", self.owner_user)
+        self.owner_user = self.owner_user.__class__.objects.get(pk=self.owner_user.pk)
+        record = self.make_sanction(approved=True, sanctioned=True)
+        corp_mock, members = self._make_fresh_esi_mock(member_count=5)
+        with patch(
+            "altmanager.tasks.helpers.get_and_update_member_list",
+            return_value=(corp_mock, members),
+        ), patch(
+            "altmanager.tasks.helpers.get_known_corporation_members_from_members"
+        ) as mock_kmci:
+            mock_kmci.return_value.count.return_value = 2  # 2<5 → success=False
+            check_alt_corp(record.pk, for_real=True)
+        record.refresh_from_db()
+        self.assertIsNotNone(record.pending_revoke)  # revoke_pending was called
+
+    def test_already_revoked_sanction_exits_at_108(self, mock_esi, mock_discord):
+        # sanc.approved+sanctioned+revoked=True, members fail → line 108 False → 108->exit
+        record = self.make_sanction(approved=True, sanctioned=True, revoked=True)
+        corp_mock, members = self._make_fresh_esi_mock(member_count=5)
+        with patch(
+            "altmanager.tasks.helpers.get_and_update_member_list",
+            return_value=(corp_mock, members),
+        ), patch(
+            "altmanager.tasks.helpers.get_known_corporation_members_from_members"
+        ) as mock_kmci:
+            mock_kmci.return_value.count.return_value = 2
+            check_alt_corp(record.pk, for_real=True)
+        record.refresh_from_db()
+        # revoked still True, pending_revoke still None (108 block was skipped)
+        self.assertTrue(record.revoked)
+        self.assertIsNone(record.pending_revoke)
+
+    def test_failure_without_for_real_exits_at_110(self, mock_esi, mock_discord):
+        # fails, not revoked, no pending_revoke, for_real=False → line 110 False → 110->exit
+        record = self.make_sanction(approved=True, sanctioned=True)
+        corp_mock, members = self._make_fresh_esi_mock(member_count=5)
+        with patch(
+            "altmanager.tasks.helpers.get_and_update_member_list",
+            return_value=(corp_mock, members),
+        ), patch(
+            "altmanager.tasks.helpers.get_known_corporation_members_from_members"
+        ) as mock_kmci:
+            mock_kmci.return_value.count.return_value = 2
+            check_alt_corp(record.pk, for_real=False)
+        record.refresh_from_db()
+        self.assertIsNone(record.pending_revoke)
+        self.assertFalse(record.revoked)
+
+    def test_pending_revoke_not_overdue_exits_at_114(self, mock_esi, mock_discord):
+        # pending_revoke in future, fails → line 114 False → 114->exit
+        record = self.make_sanction(approved=True, sanctioned=True)
+        record.pending_revoke = timezone.now() + timezone.timedelta(days=7)
+        record.save()
+        corp_mock, members = self._make_fresh_esi_mock(member_count=5)
+        with patch(
+            "altmanager.tasks.helpers.get_and_update_member_list",
+            return_value=(corp_mock, members),
+        ), patch(
+            "altmanager.tasks.helpers.get_known_corporation_members_from_members"
+        ) as mock_kmci:
+            mock_kmci.return_value.count.return_value = 2
+            check_alt_corp(record.pk, for_real=True)
+        record.refresh_from_db()
+        # pending_revoke not triggered (not overdue), revoke not triggered
+        self.assertFalse(record.revoked)
+
+    def test_pending_revoke_overdue_without_for_real_exits_at_115(self, mock_esi, mock_discord):
+        # pending_revoke overdue, fails, for_real=False → line 115 False → 115->exit
+        record = self.make_sanction(approved=True, sanctioned=True)
+        record.pending_revoke = timezone.now() - timezone.timedelta(days=1)
+        record.save()
+        corp_mock, members = self._make_fresh_esi_mock(member_count=5)
+        with patch(
+            "altmanager.tasks.helpers.get_and_update_member_list",
+            return_value=(corp_mock, members),
+        ), patch(
+            "altmanager.tasks.helpers.get_known_corporation_members_from_members"
+        ) as mock_kmci:
+            mock_kmci.return_value.count.return_value = 2
+            check_alt_corp(record.pk, for_real=False)
+        record.refresh_from_db()
+        self.assertFalse(record.revoked)
+
+    def test_owner_without_character_ownership_is_caught(self, mock_esi, mock_discord):
+        # Trigger the except block in the try: owner = sanc.request.owner.character_ownership.user
+        from allianceauth.eveonline.models import EveCharacter
+        from altmanager.models import AltCorpHistory, AltCorpRecord
+
+        bare_char = EveCharacter.objects.create(
+            character_id=9998,
+            character_name="No Ownership Char",
+            corporation_id=self.alt_corp.corporation_id,
+            corporation_name=self.alt_corp.corporation_name,
+            corporation_ticker=self.alt_corp.corporation_ticker,
+        )
+        record = AltCorpRecord.objects.create(actual_members=1, approved=True, sanctioned=True)
+        AltCorpHistory.objects.create(
+            request=record,
+            corporation=self.alt_corp,
+            corporation_name=self.alt_corp.corporation_name,
+            target=self.target,
+            owner=bare_char,
+            owner_character_name=bare_char.character_name,
+            owner_corporation_name=bare_char.corporation_name,
+        )
+
+        corp_mock, members = self._make_fresh_esi_mock(member_count=1)
+        with patch(
+            "altmanager.tasks.helpers.get_and_update_member_list",
+            return_value=(corp_mock, members),
+        ), patch(
+            "altmanager.tasks.helpers.get_known_corporation_members_from_members"
+        ) as mock_kmci:
+            mock_kmci.return_value.count.return_value = 1
+            check_alt_corp(record.pk, for_real=True)
+
+        record.refresh_from_db()
+        # Owner has no CharacterOwnership → check_owner_allowed returns False → pending_revoke set
+        self.assertIsNotNone(record.pending_revoke)
+
+
+@patch("altmanager.tasks.check_alt_corp")
+class CheckAllAltCorpsTest(AltManagerTestBase):
+    """check_all_alt_corps dispatches per-sanction tasks."""
+
+    def test_dispatches_task_for_each_sanction(self, mock_task):
+        self.make_sanction()
+        check_all_alt_corps()
+        mock_task.delay.assert_called_once()
+
+    def test_no_sanctions_dispatches_nothing(self, mock_task):
+        check_all_alt_corps()
+        mock_task.delay.assert_not_called()
+
+    def test_passes_for_real_flag(self, mock_task):
+        self.make_sanction()
+        check_all_alt_corps(for_real=True)
+        args, kwargs = mock_task.delay.call_args
+        self.assertTrue(kwargs.get("for_real", args[1] if len(args) > 1 else False))

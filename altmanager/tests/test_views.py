@@ -4,6 +4,7 @@ from allianceauth.tests.auth_utils import AuthUtils
 from django.test import TestCase
 from django.urls import reverse
 
+from altmanager.models import AltCorpRecord
 from .base import AltManagerTestBase
 
 
@@ -243,3 +244,213 @@ class ManageViewTest(AltManagerTestBase):
             )
         )
         self.assertRedirects(resp, reverse("altmanager:manage"))
+
+
+class AltCheckViewTest(AltManagerTestBase):
+    """alt_check view (detail/<entity_id>) requires can_request_alt_corp."""
+
+    def setUp(self):
+        self.user = _add_perm(
+            AuthUtils.create_user("altcheck_user"), "altmanager.can_request_alt_corp"
+        )
+        self.user.profile.main_character = self.sanctioner_char
+        self.user.profile.save()
+        self.client.force_login(self.user)
+
+    @patch("altmanager.api.providers.get_corp_token")
+    @patch("altmanager.api.providers.esi")
+    def test_valid_corp_renders_200(self, mock_esi, mock_token):
+        mock_token.return_value = MagicMock(character_id=1001)
+        mock_esi.client.Corporation.GetCorporationsCorporationIdMembers.return_value.result.return_value = []
+        self.user.is_superuser = True
+        self.user.save()
+        resp = self.client.get(
+            reverse("altmanager:detail", kwargs={"entity_id": self.alt_corp.corporation_id})
+        )
+        self.assertEqual(resp.status_code, 200)
+
+    @patch("altmanager.api.providers.get_corp_token")
+    def test_no_token_redirects_with_message(self, mock_token):
+        mock_token.return_value = None
+        self.user.is_superuser = True
+        self.user.save()
+        resp = self.client.get(
+            reverse("altmanager:detail", kwargs={"entity_id": self.alt_corp.corporation_id})
+        )
+        self.assertRedirects(resp, reverse("altmanager:request"))
+
+    def test_non_visible_corp_redirects(self):
+        # non-superuser, corp not in tokens or visible sanctions → 403 from get_missing → redirect
+        resp = self.client.get(
+            reverse("altmanager:detail", kwargs={"entity_id": self.alt_corp.corporation_id})
+        )
+        self.assertRedirects(resp, reverse("altmanager:request"))
+
+
+class ClaimCorpViewTest(AltManagerTestBase):
+    """claim_corp view: apply_corp/<entity_id>/<req_target_id>."""
+
+    def setUp(self):
+        self.user = _add_perm(
+            AuthUtils.create_user("claim_user"), "altmanager.can_request_alt_corp"
+        )
+        self.user.profile.main_character = self.sanctioner_char
+        self.user.profile.save()
+        self.client.force_login(self.user)
+
+    @patch("altmanager.views.get_and_update_member_list")
+    def test_already_claimed_redirects(self, mock_update):
+        self.make_sanction()
+        resp = self.client.get(
+            reverse(
+                "altmanager:claim_corp_target",
+                kwargs={
+                    "entity_id": self.alt_corp.corporation_id,
+                    "req_target_id": self.target.pk,
+                },
+            )
+        )
+        self.assertRedirects(resp, reverse("altmanager:request"))
+        mock_update.assert_not_called()
+
+    @patch("altmanager.views.get_and_update_member_list")
+    def test_no_token_redirects(self, mock_update):
+        mock_update.return_value = (None, None)
+        resp = self.client.get(
+            reverse(
+                "altmanager:claim_corp_target",
+                kwargs={
+                    "entity_id": self.alt_corp.corporation_id,
+                    "req_target_id": self.target.pk,
+                },
+            )
+        )
+        self.assertRedirects(resp, reverse("altmanager:request"))
+
+    @patch("altmanager.views.get_and_update_member_list")
+    def test_valid_corp_creates_sanction_and_redirects(self, mock_update):
+        mock_update.return_value = (self.alt_corp, [1001, 1002])
+        before = AltCorpRecord.objects.count()
+        resp = self.client.get(
+            reverse(
+                "altmanager:claim_corp_target",
+                kwargs={
+                    "entity_id": self.alt_corp.corporation_id,
+                    "req_target_id": self.target.pk,
+                },
+            )
+        )
+        self.assertRedirects(resp, reverse("altmanager:request"))
+        self.assertEqual(AltCorpRecord.objects.count(), before + 1)
+
+    @patch("altmanager.views.get_and_update_member_list")
+    def test_claim_direct_shows_targets_page(self, mock_update):
+        mock_update.return_value = (self.alt_corp, [1001, 1002])
+        resp = self.client.get(
+            reverse(
+                "altmanager:claim_direct",
+                kwargs={
+                    "entity_id": self.alt_corp.corporation_id,
+                    "entity_type": "corporation",
+                },
+            )
+        )
+        self.assertEqual(resp.status_code, 200)
+
+    def test_claim_direct_alliance_type_redirects(self):
+        # entity_type="alliance" hits the elif alliance: pass branch
+        resp = self.client.get(
+            reverse(
+                "altmanager:claim_direct",
+                kwargs={
+                    "entity_id": self.alt_corp.corporation_id,
+                    "entity_type": "alliance",
+                },
+            )
+        )
+        self.assertRedirects(resp, reverse("altmanager:request"))
+
+    def test_claim_direct_unknown_type_shows_error(self):
+        # entity_type not "corporation" or "alliance" → else branch with error message
+        resp = self.client.get(
+            reverse(
+                "altmanager:claim_direct",
+                kwargs={
+                    "entity_id": self.alt_corp.corporation_id,
+                    "entity_type": "unknown",
+                },
+            )
+        )
+        self.assertRedirects(resp, reverse("altmanager:request"))
+
+
+class SanctionRevokeBranchTest(AltManagerTestBase):
+    """sanction_revoke_corp: the remove_sanction else-branch (already-revoked record)."""
+
+    def setUp(self):
+        self.user = _add_perm(
+            AuthUtils.create_user("revoke_branch_user"), "altmanager.can_sanction_own_corp"
+        )
+        self.user.profile.main_character = self.sanctioner_char
+        self.user.profile.save()
+        self.client.force_login(self.user)
+
+    @patch("altmanager.models.send_discord_message")
+    def test_remove_sanction_on_revoked_record_redirects(self, mock_send):
+        # A REVOKED record → sanction_revoke_corp takes the else branch (remove_sanction)
+        record = self.make_sanction(revoked=True)
+        resp = self.client.get(
+            reverse(
+                "altmanager:sanctions_revoke",
+                kwargs={"entity_id": self.alt_corp.corporation_id},
+            )
+        )
+        self.assertRedirects(resp, reverse("altmanager:sanctions"))
+
+
+class FinalApproveLastStepTest(AltManagerTestBase):
+    """sanction_final_approve_corp: both branches of last_step_text check."""
+
+    def setUp(self):
+        self.user = _add_perm(
+            AuthUtils.create_user("last_step_user"), "altmanager.can_sanction_all"
+        )
+        self.user.profile.main_character = self.sanctioner_char
+        self.user.profile.save()
+        self.client.force_login(self.user)
+
+    @patch("altmanager.models.send_discord_message")
+    def test_last_step_text_truthy_branch(self, mock_send):
+        self.target.last_step_text = "Welcome to the corp!"
+        self.target.save()
+
+        self.make_sanction(approved=True)
+        resp = self.client.get(
+            reverse(
+                "altmanager:final_approve",
+                kwargs={"entity_id": self.alt_corp.corporation_id},
+            )
+        )
+        self.assertRedirects(resp, reverse("altmanager:manage"))
+
+        # cleanup
+        self.target.last_step_text = "None"
+        self.target.save()
+
+    @patch("altmanager.models.send_discord_message")
+    def test_last_step_text_falsy_branch(self, mock_send):
+        self.target.last_step_text = None
+        self.target.save()
+
+        self.make_sanction(approved=True)
+        resp = self.client.get(
+            reverse(
+                "altmanager:final_approve",
+                kwargs={"entity_id": self.alt_corp.corporation_id},
+            )
+        )
+        self.assertRedirects(resp, reverse("altmanager:manage"))
+
+        # cleanup
+        self.target.last_step_text = "None"
+        self.target.save()

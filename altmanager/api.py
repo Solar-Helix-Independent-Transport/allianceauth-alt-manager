@@ -275,7 +275,7 @@ def get_missing_alliance_members(request, alliance_id: int):
                             "id": ch['id'],
                             "name": ch['name'],
                             "corp_id": corp_id,
-                            "corp_name": corp_data["corporation"].corporation_name
+                            "corp_name": corp_data["corporation"]["corporation_name"]
                         }
                     )
                 _m = corp_data["known_non_members"]
@@ -285,7 +285,7 @@ def get_missing_alliance_members(request, alliance_id: int):
                             "id": ch['id'],
                             "name": ch['name'],
                             "corp_id": corp_id,
-                            "corp_name": corp_data["corporation"].corporation_name,
+                            "corp_name": corp_data["corporation"]["corporation_name"],
                             "main_id": ch['main_id'],
                             "main_name": ch['main_name'],
                             "main_corp_id": ch['corp_id'],
@@ -299,7 +299,7 @@ def get_missing_alliance_members(request, alliance_id: int):
                 output["corporations"].append({
                     "corporation": {
                         "corporation_id": corp_id,
-                        "corporation_name": corp_data["corporation"].corporation_name
+                        "corporation_name": corp_data["corporation"]["corporation_name"]
                     },
                     "unknowns": corp_data["unknowns"],
                     "knowns": corp_data["knowns"],
