@@ -24,7 +24,7 @@ def add_corp(request, token, corp_id=None):
     members = esi.client.Corporation.GetCorporationsCorporationIdMembers(
         corporation_id=char.corporation_id,
         token=token
-    ).results()
+    ).results(use_etag=False)
     corp, created = EveCorporationInfo.objects.update_or_create(
         corporation_id=char.corporation_id,
         defaults={
