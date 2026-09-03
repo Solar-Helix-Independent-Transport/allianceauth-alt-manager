@@ -13,7 +13,7 @@ from ninja import NinjaAPI
 from ninja.security import django_auth
 
 from . import providers, schema
-from .helpers import (get_all_sanctionable_alliances,
+from .helpers import (filter_known_or_vip, get_all_sanctionable_alliances,
                       get_known_corporation_members,
                       get_known_corporation_members_from_members,
                       get_user_sanctionable_alliances)
@@ -92,9 +92,9 @@ def get_stats_for_corp(request, corp_id: int):
         data = providers.esi.client.Corporation.GetCorporationsCorporationIdMembers(
             corporation_id=corp_id, token=token).result(use_etag=False)
         member_count = len(data)
-        _knowns = EveCharacter.objects.filter(character_id__in=data,
-                                              character_ownership__isnull=False
-                                              ).values_list("character_id", flat=True)
+        _knowns = filter_known_or_vip(
+            EveCharacter.objects.filter(character_id__in=data)
+        ).values_list("character_id", flat=True)
         known_ids = list(_knowns)
 
         out = list(set(data) - set(known_ids))
@@ -162,9 +162,9 @@ def get_missing(request, corp_id: int, check_members: bool = False):
 
         member_count = len(data)
 
-        _knowns = EveCharacter.objects.filter(character_id__in=data,
-                                              character_ownership__isnull=False
-                                              ).values_list("character_id", flat=True)
+        _knowns = filter_known_or_vip(
+            EveCharacter.objects.filter(character_id__in=data)
+        ).values_list("character_id", flat=True)
 
         known_ids = list(_knowns)
 

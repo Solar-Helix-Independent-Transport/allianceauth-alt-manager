@@ -1,9 +1,16 @@
 from unittest.mock import MagicMock, patch
 
+from allianceauth.authentication.models import State
 from allianceauth.tests.auth_utils import AuthUtils
 from django.utils import timezone
 
-from altmanager.tasks import check_all_alt_corps, check_alt_corp, check_owner_allowed
+from altmanager.tasks import (
+    add_vip,
+    check_all_alt_corps,
+    check_alt_corp,
+    check_owner_allowed,
+    rem_vip,
+)
 
 from .base import AltManagerTestBase
 
@@ -396,3 +403,21 @@ class CheckAllAltCorpsTest(AltManagerTestBase):
         check_all_alt_corps(for_real=True)
         args, kwargs = mock_task.delay.call_args
         self.assertTrue(kwargs.get("for_real", args[1] if len(args) > 1 else False))
+
+
+class VipTasksTest(AltManagerTestBase):
+    """add_vip / rem_vip manage membership of the s_vip State."""
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        cls.vip_state = State.objects.create(name="s_vip", priority=250)
+
+    def test_add_vip_adds_character_to_state(self):
+        add_vip(self.owner_char.character_name)
+        self.assertIn(self.owner_char, self.vip_state.member_characters.all())
+
+    def test_rem_vip_removes_character_from_state(self):
+        self.vip_state.member_characters.add(self.owner_char)
+        rem_vip(self.owner_char.character_name)
+        self.assertNotIn(self.owner_char, self.vip_state.member_characters.all())

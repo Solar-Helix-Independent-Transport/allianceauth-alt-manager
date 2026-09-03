@@ -1,9 +1,15 @@
 from unittest.mock import MagicMock, patch
 
+from allianceauth.authentication.models import State
 from allianceauth.eveonline.models import EveAllianceInfo, EveCharacter, EveCorporationInfo
 from esi.models import Token
 
-from altmanager.helpers import get_and_update_member_list
+from altmanager.helpers import (
+    VIP_STATE_NAME,
+    get_and_update_member_list,
+    get_known_corporation_members,
+    get_known_corporation_members_from_members,
+)
 
 from .base import AltManagerTestBase
 
@@ -106,3 +112,58 @@ class GetAndUpdateMemberListTest(AltManagerTestBase):
             get_and_update_member_list(self.alt_corp.corporation_id)
 
         mock_create_alliance.assert_called_once_with(99000001)
+
+
+class VipExemptFromAuthCheckTest(AltManagerTestBase):
+    """
+    Characters holding the VIP state should count as "known"/compliant in
+    corp membership checks even when they have no CharacterOwnership.
+    """
+
+    def setUp(self):
+        next_priority = (
+            State.objects.order_by("-priority").values_list(
+                "priority", flat=True
+            ).first() or 0
+        ) + 1
+        self.vip_state = State.objects.create(
+            name=VIP_STATE_NAME, priority=next_priority
+        )
+
+        self.unauthed_char = EveCharacter.objects.create(
+            character_id=5001,
+            character_name="Unauthed VIP",
+            corporation_id=self.alt_corp.corporation_id,
+            corporation_name=self.alt_corp.corporation_name,
+            corporation_ticker=self.alt_corp.corporation_ticker,
+        )
+
+        self.plain_unauthed_char = EveCharacter.objects.create(
+            character_id=5002,
+            character_name="Plain Unauthed",
+            corporation_id=self.alt_corp.corporation_id,
+            corporation_name=self.alt_corp.corporation_name,
+            corporation_ticker=self.alt_corp.corporation_ticker,
+        )
+
+    def test_unauthed_non_vip_character_not_known(self):
+        members = get_known_corporation_members(self.alt_corp.corporation_id)
+        self.assertNotIn(self.plain_unauthed_char, members)
+
+    def test_unauthed_vip_character_counts_as_known(self):
+        self.vip_state.member_characters.add(self.unauthed_char)
+
+        members = get_known_corporation_members(self.alt_corp.corporation_id)
+        self.assertIn(self.unauthed_char, members)
+
+        members_from_members = get_known_corporation_members_from_members(
+            self.alt_corp.corporation_id
+        )
+        self.assertIn(self.unauthed_char, members_from_members)
+
+    def test_removing_vip_state_drops_exemption(self):
+        self.vip_state.member_characters.add(self.unauthed_char)
+        self.vip_state.member_characters.remove(self.unauthed_char)
+
+        members = get_known_corporation_members(self.alt_corp.corporation_id)
+        self.assertNotIn(self.unauthed_char, members)

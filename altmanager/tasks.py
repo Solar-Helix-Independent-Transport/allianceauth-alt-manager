@@ -1,6 +1,8 @@
 import logging
 
 from django.contrib.auth.models import User
+from allianceauth.authentication.models import State
+from allianceauth.eveonline.models import EveCharacter
 from allianceauth.services.tasks import QueueOnce
 from altmanager import helpers, models
 from celery import shared_task
@@ -8,11 +10,29 @@ from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
+VIP_STATE_NAME = helpers.VIP_STATE_NAME
+
 
 def check_owner_allowed(user: User, corporation_id):
     if isinstance(user, User):
         return user.has_perm("altmanager.can_request_alt_corp")
     return False
+
+
+@shared_task(bind=True, base=QueueOnce)
+def add_vip(self, character_name):
+    """Add a character to the VIP state."""
+    c = EveCharacter.objects.get(character_name=character_name)
+    s = State.objects.get(name=VIP_STATE_NAME)
+    s.member_characters.add(c)
+
+
+@shared_task(bind=True, base=QueueOnce)
+def rem_vip(self, character_name):
+    """Remove a character from the VIP state."""
+    c = EveCharacter.objects.get(character_name=character_name)
+    s = State.objects.get(name=VIP_STATE_NAME)
+    s.member_characters.remove(c)
 
 
 @shared_task(bind=True, base=QueueOnce, max_retries=None)

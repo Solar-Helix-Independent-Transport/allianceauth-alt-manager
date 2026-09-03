@@ -79,6 +79,9 @@ class AltManagerConfiguration(SingletonModel):
             ('can_view_active_requests', 'Can view all active/current alt corp owners'),
             # can see all requests
             ('can_view_all_requests', 'Can view all alt corp owners'),
+
+            # VIP management
+            ('manage_vip', 'Can manage VIP characters'),
         )
 
         default_permissions = []

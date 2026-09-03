@@ -1,10 +1,10 @@
 import logging
 
-from allianceauth.authentication.models import CharacterOwnership
+from allianceauth.authentication.models import CharacterOwnership, State
 from allianceauth.eveonline.models import (EveAllianceInfo, EveCharacter,
                                            EveCorporationInfo)
 from django.contrib.auth.models import User
-from django.db.models import QuerySet
+from django.db.models import Q, QuerySet
 from esi.models import Token
 
 from altmanager.models import AltCorpRecord, AltManagerConfiguration
@@ -13,7 +13,17 @@ from .providers import esi
 
 REQUIRED_SCOPES = ["esi-corporations.read_corporation_membership.v1"]
 
+VIP_STATE_NAME = "s_vip"
+
 logger = logging.getLogger(__name__)
+
+
+def filter_known_or_vip(queryset: QuerySet[EveCharacter]) -> QuerySet[EveCharacter]:
+    """Restrict a character queryset to those that are authed, or exempt from
+    the "must be authed" requirement because they hold the VIP state."""
+    return queryset.filter(
+        Q(character_ownership__isnull=False) | Q(state__name=VIP_STATE_NAME)
+    ).distinct()
 
 
 def get_all_sanctionable_alliances() -> QuerySet[EveAllianceInfo]:
@@ -49,9 +59,8 @@ def get_user_sanctionable_alliances(user) -> QuerySet[EveAllianceInfo]:
 
 
 def get_known_corporation_members(corporation_id: int) -> QuerySet[EveCharacter]:
-    characters = EveCharacter.objects.filter(
-        corporation_id=corporation_id,
-        character_ownership__isnull=False
+    characters = filter_known_or_vip(
+        EveCharacter.objects.filter(corporation_id=corporation_id)
     )
     # logger.warning(corporation_id)
     # logger.warning(characters)
@@ -61,11 +70,12 @@ def get_known_corporation_members(corporation_id: int) -> QuerySet[EveCharacter]
 
 def get_known_corporation_members_from_members(corporation_id: int) -> QuerySet[EveCharacter]:
     characters = EveCharacter.objects.filter(
-        corporation_id=corporation_id,
-        character_ownership__user__profile__main_character__corporation_id__in=(
+        corporation_id=corporation_id
+    ).filter(
+        Q(character_ownership__user__profile__main_character__corporation_id__in=(
             AltManagerConfiguration.get_member_corporation_ids()
-        )
-    )
+        )) | Q(state__name=VIP_STATE_NAME)
+    ).distinct()
     # logger.warning(corporation_id)
     # logger.warning(characters)
     # logger.warning(characters.count())
